@@ -64,8 +64,7 @@ incident text, not a dependency chain.
      (root cause, fix, time taken, priority, confidence, risk)
 ```
 
-Diagram source: [`docs/architecture.md`](docs/architecture.md) — swap for a
-rendered image (draw.io / Mermaid export) once finalized.
+(Architecture diagram shown above — a rendered image version can be added later.)
 
 ## What this deliberately does NOT do (and why)
 
