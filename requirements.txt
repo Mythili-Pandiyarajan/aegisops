@@ -1,0 +1,10 @@
+langgraph>=0.4
+langchain-core
+faiss-cpu
+scikit-learn
+xgboost
+joblib
+streamlit
+docker
+pytest
+flake8

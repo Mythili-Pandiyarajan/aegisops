@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.pkl
+.env
+.streamlit/secrets.toml
+faiss_index/
