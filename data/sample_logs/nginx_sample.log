@@ -1,0 +1,4 @@
+2026/07/18 09:41:02 [error] 812#812: *5521 connect() failed (111: Connection refused) while connecting to upstream, client: 10.0.4.22, server: app.internal, request: "GET /api/v2/orders HTTP/1.1", upstream: "http://10.0.4.101:8080/api/v2/orders", host: "app.internal"
+2026/07/18 09:41:03 [error] 812#812: *5522 connect() failed (111: Connection refused) while connecting to upstream, client: 10.0.4.23, server: app.internal, request: "GET /api/v2/orders HTTP/1.1", upstream: "http://10.0.4.101:8080/api/v2/orders", host: "app.internal"
+2026/07/18 09:41:15 [warn] 812#812: *5530 upstream server temporarily disabled while connecting to upstream, client: 10.0.4.9, server: app.internal
+2026/07/18 09:42:01 [error] 812#812: *5540 upstream timed out (110: Connection timed out) while reading response header from upstream, client: 10.0.4.31, server: app.internal, request: "POST /api/v2/checkout HTTP/1.1"
