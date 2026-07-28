@@ -8,3 +8,4 @@ streamlit
 docker
 pytest
 flake8
+groq
