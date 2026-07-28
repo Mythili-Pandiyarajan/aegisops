@@ -9,3 +9,4 @@ docker
 pytest
 flake8
 groq
+sentence-transformers
