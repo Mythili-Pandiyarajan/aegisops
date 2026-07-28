@@ -1,0 +1,68 @@
+[
+  {
+    "id": "sop-net-001",
+    "category": "network",
+    "type": "sop",
+    "text": "SOP: VPN Connectivity Failure. When users report inability to connect to VPN, first check the VPN concentrator's active session count against its licensed limit -- session exhaustion is the most common cause. Second, verify the RADIUS authentication server is reachable and responding within 2 seconds. Third, check for recent certificate expiry on the VPN gateway. Escalate to network on-call if session count is normal and RADIUS is healthy but connections still fail."
+  },
+  {
+    "id": "inc-net-014",
+    "category": "network",
+    "type": "incident",
+    "text": "Incident #4821 (resolved): Multiple users unable to connect to VPN between 08:00-09:15. Root cause: VPN concentrator session limit reached due to stale sessions not being cleaned up after laptop sleep. Fix: restarted VPN service to clear stale sessions, then reduced idle session timeout from 24h to 4h to prevent recurrence. Resolution time: 45 min."
+  },
+  {
+    "id": "sop-net-002",
+    "category": "network",
+    "type": "sop",
+    "text": "SOP: Intermittent Network Latency. For reports of slow/dropping connections, check switch port error counters first (CRC errors indicate a cabling issue). If errors are clean, check for recent changes to QoS policies or ACLs on the affected VLAN."
+  },
+  {
+    "id": "sop-hw-001",
+    "category": "hardware",
+    "type": "sop",
+    "text": "SOP: Server Disk Space Critical Alert. When disk usage exceeds 90% on a production server, first identify the largest consumers with `du -sh /* | sort -rh`. Common culprits: unrotated log files, core dumps, or orphaned Docker images. Never delete files without confirming they aren't actively held open by a running process."
+  },
+  {
+    "id": "inc-hw-009",
+    "category": "hardware",
+    "type": "incident",
+    "text": "Incident #4790 (resolved): Application server app-prod-03 became unresponsive. Root cause: disk filled to 100% due to an application log that wasn't being rotated after a config change three weeks earlier. Fix: cleared old logs, re-enabled logrotate, added disk usage alerting at 80% threshold. Resolution time: 1h 20min."
+  },
+  {
+    "id": "sop-db-001",
+    "category": "database",
+    "type": "sop",
+    "text": "SOP: Database Connection Pool Exhaustion. If the application logs show 'connection pool exhausted' errors, check for long-running or hung queries first with `SHOW PROCESSLIST` (or equivalent). A single runaway query holding a lock is the most frequent cause. Kill the offending session and investigate the query plan before re-running."
+  },
+  {
+    "id": "inc-db-022",
+    "category": "database",
+    "type": "incident",
+    "text": "Incident #4855 (resolved): Checkout service returning 500 errors under load. Root cause: a missing index on the orders table caused a full table scan on a frequently-run query, holding connections open long enough to exhaust the pool. Fix: added the missing index, connection pool recovered within 5 minutes. Resolution time: 55 min."
+  },
+  {
+    "id": "sop-sec-001",
+    "category": "security",
+    "type": "sop",
+    "text": "SOP: Suspicious Login Activity. For alerts on repeated failed login attempts from a single account, first check if the source IP is internal or external. External sources with 5+ failures in under a minute should be treated as a credential-stuffing attempt: lock the account and notify the user via a verified out-of-band channel."
+  },
+  {
+    "id": "inc-sec-006",
+    "category": "security",
+    "type": "incident",
+    "text": "Incident #4711 (resolved): Automated alert for unusual login pattern on a finance team account. Root cause: employee travelling and logging in from a new country triggered geo-velocity detection -- confirmed legitimate after callback verification. No compromise. Added the travel itinerary to the allowlist system to reduce future false positives for pre-approved travel."
+  },
+  {
+    "id": "sop-email-001",
+    "category": "email",
+    "type": "sop",
+    "text": "SOP: Outbound Email Delivery Failures. If users report emails not being delivered externally, first check the mail relay's queue for backlog. If the queue is backed up, check whether the sending IP has been flagged on any major blocklist (Spamhaus, Barracuda). A blocklisting is the most common cause of sudden delivery failure."
+  },
+  {
+    "id": "inc-email-011",
+    "category": "email",
+    "type": "incident",
+    "text": "Incident #4762 (resolved): Company-wide reports of external emails bouncing. Root cause: the mail relay's outbound IP was added to a public blocklist after a compromised internal account sent spam over the weekend. Fix: reset the compromised account's credentials, requested blocklist delisting, delisted within 6 hours. Resolution time: 6h 30min (mostly waiting on external delisting)."
+  }
+]
