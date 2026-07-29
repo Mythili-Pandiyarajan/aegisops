@@ -1,0 +1,16 @@
+2026-07-27 08:00:05 container=web-frontend-7d4f status=running
+2026-07-27 08:00:12 container=order-service-2b1a status=running
+2026-07-27 08:02:44 container=order-service-2b1a level=info msg="processing batch job #8821"
+2026-07-27 08:03:20 container=order-service-2b1a level=warn msg="memory usage at 87% of limit (1.7GB/2GB)"
+2026-07-27 08:04:01 container=order-service-2b1a level=warn msg="memory usage at 94% of limit (1.88GB/2GB)"
+2026-07-27 08:04:33 kernel: Out of memory: Killed process 18422 (order-service) total-vm:2148920kB, anon-rss:2097152kB
+2026-07-27 08:04:34 dockerd[901]: container order-service-2b1a exited with code 137 (OOMKilled)
+2026-07-27 08:04:35 dockerd[901]: restarting container order-service-2b1a (restart policy: on-failure)
+2026-07-27 08:04:41 container=order-service-2b1a status=starting
+2026-07-27 08:04:52 container=order-service-2b1a status=running
+2026-07-27 08:05:10 container=order-service-2b1a level=info msg="resuming batch job #8821 from checkpoint"
+2026-07-27 08:06:30 container=order-service-2b1a level=warn msg="memory usage at 91% of limit (1.82GB/2GB)"
+2026-07-27 08:07:44 kernel: Out of memory: Killed process 18490 (order-service) total-vm:2151020kB, anon-rss:2098210kB
+2026-07-27 08:07:45 dockerd[901]: container order-service-2b1a exited with code 137 (OOMKilled)
+2026-07-27 08:07:46 dockerd[901]: restarting container order-service-2b1a (restart policy: on-failure)
+2026-07-27 08:08:01 container=web-frontend-7d4f level=info msg="health check OK"
