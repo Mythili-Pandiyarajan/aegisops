@@ -21,3 +21,9 @@
 2026-07-27 08:10:12 WARNING kernel: [123901.221] thermal throttling engaged on CPU2
 2026-07-27 08:12:00 INFO cron[8845]: (root) CMD (/usr/local/bin/disk-check.sh)
 2026-07-27 08:15:33 INFO backup-agent[512]: nightly backup completed, 84.2 GB transferred
+2026-07-27 08:16:02 WARNING disk-monitor[701]: app-prod-03 root partition at 87% capacity
+2026-07-27 08:22:47 WARNING disk-monitor[701]: app-prod-03 root partition at 92% capacity, threshold exceeded
+2026-07-27 08:30:15 ERROR disk-monitor[701]: app-prod-03 disk usage critical: 95% capacity, 2.1 GB free of 40 GB
+2026-07-27 08:30:16 ERROR disk-monitor[701]: app-prod-03 write to /var/log/app/application.log failed: No space left on device
+2026-07-27 08:31:02 WARNING systemd[1]: app-prod-03: logrotate.service reported errors on last run
+2026-07-27 08:33:40 INFO cron[8901]: (root) CMD (du -sh /var/log/* | sort -rh on app-prod-03)
