@@ -1,0 +1,14 @@
+2026-07-20 06:58:02 postfix/smtp[2201]: connect to mail.internal[10.1.9.10]:25
+2026-07-20 07:00:15 postfix/qmgr[901]: 4A2F1-0001: from=<noreply@shop.internal>, size=2104, nrcpt=1
+2026-07-20 07:00:16 postfix/smtp[2205]: 4A2F1-0001: to=<customer1@example.com>, status=sent
+2026-07-20 07:12:33 postfix/qmgr[901]: 4A2F2-0002: from=<noreply@shop.internal>, size=1980, nrcpt=1
+2026-07-20 07:12:40 postfix/smtp[2210]: 4A2F2-0002: to=<customer2@example.com>, relay=mx.example.com, status=deferred (host mx.example.com refused to talk to me: 550 5.7.1 Service unavailable, Client host blocked using Spamhaus SBL)
+2026-07-20 07:13:01 postfix/smtp[2211]: 4A2F3-0003: to=<customer3@webmail.com>, relay=mx2.webmail.com, status=deferred (host mx2.webmail.com refused to talk to me: 550 5.7.1 blocked by Barracuda Reputation Block List)
+2026-07-20 07:15:22 postfix/smtp[2214]: 4A2F4-0004: to=<customer4@example.com>, status=deferred (550 5.7.1 Client host blocked using Spamhaus SBL)
+2026-07-20 07:18:00 postfix/qmgr[901]: queue size: 214 deferred messages
+2026-07-20 07:20:11 postfix/smtp[2220]: 4A2F5-0005: to=<customer5@example.com>, status=deferred (550 5.7.1 Client host blocked using Spamhaus SBL)
+2026-07-20 07:25:44 postfix/smtp[2222]: warning: outbound IP 203.0.113.44 flagged on Spamhaus SBL since 2026-07-20 06:40 UTC
+2026-07-20 07:30:00 postfix/qmgr[901]: queue size: 340 deferred messages
+2026-07-20 07:41:19 sec-audit[301]: account svc-newsletter@shop.internal sent 4200 messages in 15 minutes (baseline: ~50/day) -- possible compromise
+2026-07-20 07:42:02 sec-audit[301]: locking account svc-newsletter@shop.internal pending investigation
+2026-07-20 08:00:00 postfix/qmgr[901]: queue size: 512 deferred messages
