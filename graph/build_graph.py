@@ -134,7 +134,7 @@ def build_graph():
 
     graph.add_edge(
         "rag_agent",
-        "log_analysis"
+        "log_analysis_agent"
     )
 
     graph.add_edge(
@@ -149,7 +149,7 @@ def build_graph():
 
     graph.add_edge(
         "ticket_generator",
-        "manager_summary"
+        "manager_summary_agent"
     )
 
     graph.add_edge(
