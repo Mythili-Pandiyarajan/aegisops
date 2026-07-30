@@ -10,3 +10,8 @@ pytest
 flake8
 groq
 sentence-transformers
+torch
+torchvision
+transformers
+groq
+python-dotenv
