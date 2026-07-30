@@ -1,12 +1,5 @@
 """
 AegisOps - Log Analysis Agent
-
-Responsibilities
-----------------
-1. Search uploaded log (preferred)
-2. Fall back to demo logs (optional)
-3. Summarize only actual evidence
-4. Never hallucinate a root cause
 """
 
 from tools.log_parser import search_logs
@@ -14,17 +7,9 @@ from tools.llm import llm
 
 
 def run_log_analysis_agent(state):
-    """
-    State expects:
 
-    incident_text
-    predicted_category
-    uploaded_log_path (optional)
+    print("🚀 LOG ANALYSIS STARTED")
 
-    Returns:
-        log_findings
-        suspected_root_cause
-    """
 
     incident = state["incident_text"]
 
@@ -33,9 +18,17 @@ def run_log_analysis_agent(state):
     uploaded_log = state.get("uploaded_log_path")
 
 
+    print("📌 Incident:", incident)
+    print("📌 Category:", category)
+    print("📌 Uploaded log:", uploaded_log)
+
+
     ######################################################
     # Search logs
     ######################################################
+
+    print("🔎 Searching logs...")
+
 
     log_hits = search_logs(
         incident_text=incident,
@@ -45,11 +38,17 @@ def run_log_analysis_agent(state):
     )
 
 
+    print("✅ Log search completed")
+    print("📄 Logs found:", len(log_hits))
+
+
     ######################################################
     # No evidence
     ######################################################
 
     if len(log_hits) == 0:
+
+        print("⚠️ No log evidence found")
 
         return {
 
@@ -57,11 +56,7 @@ def run_log_analysis_agent(state):
                 "No relevant log evidence found.",
 
             "suspected_root_cause":
-                (
-                    "Insufficient log evidence to determine the root cause. "
-                    "Upload authentication, VPN, application, "
-                    "system or database logs."
-                )
+                "Insufficient log evidence to determine root cause."
         }
 
 
@@ -70,42 +65,33 @@ def run_log_analysis_agent(state):
     ######################################################
 
     evidence = "\n".join(
-        f"[{src}] {line}"
+        f"[{src}] {line[:300]}"
         for src, line in log_hits
     )
 
 
+    print("📝 Evidence prepared")
+
+
     ######################################################
-    # Prompt for Groq LLM
+    # Prompt
     ######################################################
 
     prompt = f"""
 You are a Senior Site Reliability Engineer.
 
-You MUST use ONLY the log evidence below.
-
-Never invent errors.
-
-Never mention files that are not shown.
-
-If evidence is insufficient, reply:
-
-Insufficient log evidence to determine root cause.
+Use ONLY the evidence provided.
 
 Incident:
-
 {incident}
 
 Category:
-
 {category}
 
-Relevant Log Evidence:
-
+Evidence:
 {evidence}
 
-
-Return ONLY:
+Return:
 
 1. Root Cause
 
@@ -115,6 +101,9 @@ Return ONLY:
 """
 
 
+    print("🧠 Sending request to Groq...")
+
+
     ######################################################
     # Groq LLM
     ######################################################
@@ -122,9 +111,8 @@ Return ONLY:
     response = llm.invoke(prompt)
 
 
-    ######################################################
-    # Update LangGraph State
-    ######################################################
+    print("✅ Groq response received")
+
 
     return {
 
