@@ -56,8 +56,37 @@ NODE_LABELS = {
 }
 NODE_ORDER = list(NODE_LABELS.keys())
 
-CI_CAT_OPTIONS = ["Software", "Hardware", "Network", "Database", "Security", "Application", "Infrastructure"]
-CATEGORY_OPTIONS = ["incident", "problem", "change", "service request"]
+# These must exactly match the string values LabelEncoder was fit on during
+# training (confirmed against the real itsm_data.csv), not made-up labels —
+# an unseen category here would break scaler.transform()/model.predict().
+CI_CAT_OPTIONS = [
+    "application",
+    "subapplication",
+    "computer",
+    "storage",
+    "hardware",
+    "software",
+    "database",
+    "displaydevice",
+    "officeelectronics",
+    "networkcomponents",
+]
+CATEGORY_OPTIONS = ["incident", "request for information", "complaint", "request for change"]
+
+# Most common CI_Subcat per CI_Cat, from the real training data — use this
+# in tools/priority_model.py in place of a single hardcoded constant.
+CI_SUBCAT_DEFAULTS = {
+    "application": "Server Based Application",
+    "subapplication": "Web Based Application",
+    "computer": "Laptop",
+    "storage": "SAN",
+    "hardware": "DataCenterEquipment",
+    "software": "System Software",
+    "database": "Database",
+    "displaydevice": "Monitor",
+    "officeelectronics": "Printer",
+    "networkcomponents": "Network Component",
+}
 
 SEVERITY_OPTIONS = {
     "P1 — Critical: service down / major impact": "P1",
@@ -590,13 +619,20 @@ elif st.session_state.page == "intake":
                 except Exception:
                     st.info("Could not read the uploaded log file as text — continuing without it.")
 
-            ticket_fields = {"ci_cat": ci_cat, "category": category, "open_hour": open_hour}
+            ticket_fields = {
+                "ci_cat": ci_cat,
+                "ci_subcat": CI_SUBCAT_DEFAULTS.get(ci_cat, "Web Based Application"),
+                "category": category,
+                "open_hour": open_hour,
+            }
 
             record = {
                 "id": incident_id,
                 "title": title.strip(),
                 "reported_severity": reported_severity,
                 "created_at": datetime.now().strftime("%H:%M:%S"),
+                "incident_text": incident_text,
+                "ticket_fields": ticket_fields,
             }
 
             st.divider()
@@ -677,8 +713,11 @@ elif st.session_state.page == "approvals":
             c1, c2 = st.columns([1, 3])
             with c1:
                 if st.button("✅ Approve & execute", key=f"approve_{i['id']}"):
-                    incident_text = i["title"]
-                    ticket_fields = {"ci_cat": "Application", "category": "incident", "open_hour": datetime.now().hour}
+                    incident_text = i.get("incident_text", i["title"])
+                    ticket_fields = i.get(
+                        "ticket_fields",
+                        {"ci_cat": "application", "ci_subcat": "Web Based Application", "category": "incident", "open_hour": datetime.now().hour},
+                    )
                     st.divider()
                     st.markdown(f"##### Re-running pipeline for `{i['id']}` with approval")
                     try:
