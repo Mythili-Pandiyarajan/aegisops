@@ -1,20 +1,60 @@
-# Isolated sandbox for the Shell Agent's allowlisted diagnostic commands.
-# No host filesystem mounts, no network beyond what's needed for the
-# demo. This container should never need write access to anything
-# outside itself.
+# ============================================================
+# AegisOps Shell Agent Diagnostic Sandbox
+#
+# Purpose:
+# - Executes ONLY allowlisted read-only diagnostics
+# - No host filesystem access
+# - No privileged permissions
+# - No shell command generation
+# ============================================================
+
 
 FROM debian:bookworm-slim
+
+
+# ------------------------------------------------------------
+# Install only required diagnostic utilities
+# ------------------------------------------------------------
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     iputils-ping \
     iproute2 \
     procps \
-    docker.io \
+    grep \
+    systemd \
+    systemd-sysv \
+    default-mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Run as a non-root user — the sandbox should not have privileges it
-# doesn't need, even for read-only diagnostic commands.
-RUN useradd -m sandboxuser
+
+
+# ------------------------------------------------------------
+# Create isolated non-root user
+# ------------------------------------------------------------
+
+RUN useradd \
+    --create-home \
+    --shell /bin/bash \
+    sandboxuser
+
+
 USER sandboxuser
+
+
+WORKDIR /home/sandboxuser
+
+
+
+# ------------------------------------------------------------
+# Environment
+# ------------------------------------------------------------
+
+ENV HOME=/home/sandboxuser
+
+
+
+# ------------------------------------------------------------
+# Keep sandbox alive
+# ------------------------------------------------------------
 
 CMD ["sleep", "infinity"]
