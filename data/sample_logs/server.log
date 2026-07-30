@@ -1,0 +1,30 @@
+2026-07-27 07:58:12 INFO systemd[1]: Started Session 4021 of user svc-monitor.
+2026-07-27 07:58:44 INFO cron[8821]: (root) CMD (/usr/local/bin/backup-check.sh)
+2026-07-27 07:59:01 INFO sshd[9012]: Accepted publickey for deploy from 10.2.4.18 port 51422
+2026-07-27 08:00:03 WARNING kernel: [123456.789] eth0: link status down, retrying
+2026-07-27 08:00:04 INFO kernel: [123456.912] eth0: link status up
+2026-07-27 08:02:15 INFO systemd[1]: Reloading nginx.service
+2026-07-27 08:04:33 WARNING vpn-concentrator[201]: active session count 498/500 (99.6% capacity)
+2026-07-27 08:05:02 WARNING vpn-concentrator[201]: active session count 500/500 (100.0% capacity)
+2026-07-27 08:05:11 ERROR vpn-concentrator[201]: session limit reached, rejecting new connection from 10.4.2.91
+2026-07-27 08:05:14 ERROR vpn-concentrator[201]: session limit reached, rejecting new connection from 10.4.2.102
+2026-07-27 08:05:19 ERROR vpn-concentrator[201]: session limit reached, rejecting new connection from 10.4.2.77
+2026-07-27 08:05:22 INFO radius-auth[303]: health check OK, response time 84ms
+2026-07-27 08:05:30 ERROR vpn-concentrator[201]: session limit reached, rejecting new connection from 10.4.3.14
+2026-07-27 08:06:01 INFO cron[8830]: (root) CMD (/usr/local/bin/log-rotate.sh)
+2026-07-27 08:06:45 ERROR vpn-concentrator[201]: session limit reached, rejecting new connection from 10.4.2.55
+2026-07-27 08:07:03 WARNING systemd[1]: nginx.service: Deactivated successfully.
+2026-07-27 08:07:04 INFO systemd[1]: nginx.service: Consumed 2.104s CPU time.
+2026-07-27 08:08:12 INFO sshd[9088]: Accepted publickey for ci-runner from 10.2.4.33 port 44210
+2026-07-27 08:09:00 ERROR vpn-concentrator[201]: session limit reached, rejecting new connection from 10.4.2.19
+2026-07-27 08:09:45 INFO systemd[1]: Started Session 4022 of user svc-monitor.
+2026-07-27 08:10:12 WARNING kernel: [123901.221] thermal throttling engaged on CPU2
+2026-07-27 08:12:00 INFO cron[8845]: (root) CMD (/usr/local/bin/disk-check.sh)
+2026-07-27 08:15:33 INFO backup-agent[512]: nightly backup completed, 84.2 GB transferred
+2026-07-27 08:13:03 WARNING disk-monitor[601]: /var partition at 88% capacity on app-prod-03
+2026-07-27 08:14:15 WARNING disk-monitor[601]: /var partition at 93% capacity on app-prod-03
+2026-07-27 08:14:40 ERROR disk-monitor[601]: /var partition at 96% capacity on app-prod-03, approaching critical threshold
+2026-07-27 08:15:02 WARNING app-prod-03[701]: application.log has not rotated in 21 days, current size 42GB
+2026-07-27 08:15:30 ERROR disk-monitor[601]: /var partition at 98% capacity on app-prod-03, write failures imminent
+2026-07-27 08:16:01 ERROR app-prod-03[701]: failed to write to application.log: No space left on device
+2026-07-27 08:16:22 CRITICAL app-prod-03[701]: service degraded, disk full on /var
