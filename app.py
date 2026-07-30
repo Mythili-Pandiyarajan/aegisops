@@ -634,7 +634,7 @@ if submitted:
             "open_hour": open_hour,
         }
 
-        record = {
+                record = {
             "id": incident_id,
             "title": title.strip(),
             "reported_severity": reported_severity,
@@ -642,20 +642,44 @@ if submitted:
             "incident_text": incident_text,
             "ticket_fields": ticket_fields,
         }
-            st.divider()
-            st.markdown(f"##### Running pipeline for `{incident_id}`")
-            try:
-                state = run_pipeline(incident_text=incident_text,incident_id=incident_id,ticket_fields=ticket_fields,uploaded_log_path=uploaded_log_path,human_approved=False,)
-                record_run(record, state, success=True)
-                st.session_state.incidents.append(record)
-                save_persisted()
-                st.success(f"Incident `{incident_id}` filed — status: **{record['status'].replace('_',' ')}**")
-                st.button("View on dashboard →", on_click=goto, args=("dashboard",))
-            except Exception as e:
-                record_run(record, {}, success=False)
-                st.session_state.incidents.append({**record, "status": "active", "predicted_priority": None})
-                save_persisted()
-                st.error(f"Pipeline run failed: {e}")
+
+        st.divider()
+        st.markdown(f"##### Running pipeline for `{incident_id}`")
+
+        try:
+            state = run_pipeline(
+                incident_text=incident_text,
+                incident_id=incident_id,
+                ticket_fields=ticket_fields,
+                uploaded_log_path=uploaded_log_path,
+                human_approved=False,
+            )
+
+            record_run(record, state, success=True)
+            st.session_state.incidents.append(record)
+            save_persisted()
+
+            st.success(
+                f"Incident `{incident_id}` filed — status: **{record['status'].replace('_',' ')}**"
+            )
+
+            st.button(
+                "View on dashboard →",
+                on_click=goto,
+                args=("dashboard",),
+            )
+
+        except Exception as e:
+            record_run(record, {}, success=False)
+            st.session_state.incidents.append(
+                {
+                    **record,
+                    "status": "active",
+                    "predicted_priority": None,
+                }
+            )
+            save_persisted()
+            st.error(f"Pipeline run failed: {e}")
 
 # =========================================================================
 # PAGE: Active Incidents
