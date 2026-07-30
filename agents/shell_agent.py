@@ -1,17 +1,31 @@
 """
 AegisOps Shell Agent
 
-Responsibilities
-----------------
-✓ Never invent shell commands
-✓ Uses only allowlisted commands
-✓ Rule-based command selection
-✓ Human approval required
-✓ Read-only diagnostics only
+The Shell Agent NEVER generates shell commands directly.
+It selects an allowlisted command and lets build_command()
+construct the final validated command.
+
+Workflow:
+
+Incident
+    ↓
+Root Cause
+    ↓
+Rule Engine
+    ↓
+(command_name, target)
+    ↓
+build_command()
+    ↓
+Validated Command
+    ↓
+Human Approval
 """
 
-from sandbox.allowlist import ALLOWED_COMMANDS
-
+from sandbox.allowlist import (
+    build_command,
+    CommandNotAllowedError,
+)
 
 ###############################################################
 # Category defaults
@@ -19,89 +33,90 @@ from sandbox.allowlist import ALLOWED_COMMANDS
 
 CATEGORY_COMMANDS = {
 
-    "security": [
-        "grep 'Failed password' /var/log/auth.log",
-        "journalctl -u ssh",
-        "faillock --user",
-    ],
+    "security": ("failed_logins", None),
 
-    "application": [
-        "systemctl status nginx",
-        "journalctl -u nginx",
-    ],
+    "application": ("service_status", "nginx"),
 
-    "database": [
-        "systemctl status mysql",
-        "mysqladmin ping",
-    ],
+    "database": ("mysql_ping", None),
 
-    "docker": [
-        "docker ps",
-        "docker logs",
-    ],
+    "hardware": ("disk_usage", None),
 
-    "hardware": [
-        "df -h",
-        "free -m",
-        "top -n 1",
-    ],
+    "network": ("ping", "localhost"),
 
-    "network": [
-        "ping",
-        "traceroute",
-    ],
+    "email": ("mail_queue", None),
 
-    "email": [
-        "systemctl status postfix",
-        "mailq",
-    ],
+    "docker": ("docker_ps", None),
 }
 
-
 ###############################################################
-# Root-cause keywords
+# Root cause keyword mapping
 ###############################################################
 
 KEYWORD_COMMANDS = {
 
-    "nginx": "systemctl status nginx",
+    # ---------- Web ----------
+    "nginx": ("service_status", "nginx"),
 
-    "mysql": "systemctl status mysql",
+    "apache": ("service_status", "apache2"),
 
-    "postgres": "systemctl status postgresql",
+    # ---------- Database ----------
+    "mysql": ("service_status", "mysql"),
 
-    "docker": "docker ps",
+    "postgres": ("service_status", "postgresql"),
 
-    "oom": "free -m",
+    "database": ("mysql_ping", None),
 
-    "memory": "free -m",
+    # ---------- Docker ----------
+    "docker": ("docker_ps", None),
 
-    "disk": "df -h",
+    "container": ("docker_ps", None),
 
-    "filesystem": "df -h",
+    # ---------- Hardware ----------
+    "disk": ("disk_usage", None),
 
-    "cpu": "top -n 1",
+    "filesystem": ("disk_usage", None),
 
-    "ssh": "journalctl -u ssh",
+    "storage": ("disk_usage", None),
 
-    "failed password": "grep 'Failed password' /var/log/auth.log",
+    "memory": ("memory_usage", None),
 
-    "authentication": "journalctl -u ssh",
+    "oom": ("memory_usage", None),
 
-    "credential": "grep 'Failed password' /var/log/auth.log",
+    "cpu": ("cpu_usage", None),
 
-    "vpn": "journalctl -u ssh",
+    # ---------- Authentication ----------
+    "failed password": ("failed_logins", None),
 
-    "dns": "ping",
+    "authentication": ("ssh_logs", None),
 
-    "latency": "ping",
+    "credential": ("failed_logins", None),
 
-    "timeout": "ping",
+    "login": ("failed_logins", None),
 
-    "packet": "ping",
+    "ssh": ("ssh_logs", None),
 
+    "vpn": ("ssh_logs", None),
+
+    "account locked": ("faillock", "admin"),
+
+    # ---------- Network ----------
+    "dns": ("ping", "8.8.8.8"),
+
+    "latency": ("ping", "8.8.8.8"),
+
+    "packet": ("ping", "8.8.8.8"),
+
+    "timeout": ("ping", "8.8.8.8"),
+
+    "gateway": ("ping", "8.8.8.8"),
+
+    # ---------- Email ----------
+    "smtp": ("mail_queue", None),
+
+    "relay": ("mail_queue", None),
+
+    "mail": ("mail_queue", None),
 }
-
 
 ###############################################################
 
@@ -109,38 +124,14 @@ def choose_command(category, root_cause):
 
     root = (root_cause or "").lower()
 
-    ###########################################################
     # Keyword match first
-    ###########################################################
-
-    for keyword, command in KEYWORD_COMMANDS.items():
+    for keyword, value in KEYWORD_COMMANDS.items():
 
         if keyword in root:
+            return value
 
-            return command
-
-    ###########################################################
     # Category fallback
-    ###########################################################
-
-    commands = CATEGORY_COMMANDS.get(category)
-
-    if commands:
-
-        return commands[0]
-
-    return None
-
-
-###############################################################
-
-def validate(command):
-
-    if command is None:
-
-        return False
-
-    return command in ALLOWED_COMMANDS
+    return CATEGORY_COMMANDS.get(category, (None, None))
 
 
 ###############################################################
@@ -151,20 +142,49 @@ def run_shell_agent(state):
 
     root = state.get("suspected_root_cause", "")
 
-    command = choose_command(category, root)
+    command_name, target = choose_command(category, root)
 
     ###########################################################
 
-    if not validate(command):
+    if command_name is None:
 
         return {
+
+            "command_name": None,
+
+            "target": None,
 
             "proposed_command": None,
 
             "approval_required": False,
 
             "command_status":
-                "No safe diagnostic command available."
+                "No suitable diagnostic command found."
+
+        }
+
+    ###########################################################
+
+    try:
+
+        command = build_command(
+            command_name,
+            target,
+        )
+
+    except CommandNotAllowedError as e:
+
+        return {
+
+            "command_name": command_name,
+
+            "target": target,
+
+            "proposed_command": None,
+
+            "approval_required": False,
+
+            "command_status": str(e),
 
         }
 
@@ -172,11 +192,15 @@ def run_shell_agent(state):
 
     return {
 
+        "command_name": command_name,
+
+        "target": target,
+
         "proposed_command": command,
 
         "approval_required": True,
 
         "command_status":
-            "Awaiting human approval before execution."
+            "Awaiting human approval before execution.",
 
     }
