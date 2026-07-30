@@ -604,40 +604,44 @@ elif st.session_state.page == "intake":
 
     submitted = st.button("🚀  Analyze & file incident", type="primary")
 
-    if submitted:
-        if not title.strip() or not description.strip():
-            st.warning("Please provide at least an incident title and description before filing.")
-        else:
-            st.session_state.run_counter += 1
-            incident_id = f"INC-{datetime.now().strftime('%Y%m%d')}-{st.session_state.run_counter:03d}"
+if submitted:
+    if not title.strip() or not description.strip():
+        st.warning("Please provide at least an incident title and description before filing.")
+    else:
+        st.session_state.run_counter += 1
 
-            incident_text = f"{title}\n\n{description}"
+        incident_id = f"INC-{datetime.now().strftime('%Y%m%d')}-{st.session_state.run_counter:03d}"
 
-uploaded_log_path = None
+        incident_text = f"{title}\n\n{description}"
 
-if log_file is not None:
-    try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".log") as tmp:
-            tmp.write(log_file.getvalue())
-            uploaded_log_path = tmp.name
-    except Exception as e:
-        st.warning(f"Could not save uploaded log: {e}")
-      
-  ticket_fields = {
-                "ci_cat": ci_cat,
-                "ci_subcat": CI_SUBCAT_DEFAULTS.get(ci_cat, "Web Based Application"),
-                "category": category,
-                "open_hour": open_hour,
-            }
+        uploaded_log_path = None
 
-            record = {
-                "id": incident_id,
-                "title": title.strip(),
-                "reported_severity": reported_severity,
-                "created_at": datetime.now().strftime("%H:%M:%S"),
-                "incident_text": incident_text,
-                "ticket_fields": ticket_fields,
-            }
+        if log_file is not None:
+            try:
+                import tempfile
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".log") as tmp:
+                    tmp.write(log_file.getvalue())
+                    uploaded_log_path = tmp.name
+
+            except Exception as e:
+                st.warning(f"Could not save uploaded log: {e}")
+
+        ticket_fields = {
+            "ci_cat": ci_cat,
+            "ci_subcat": CI_SUBCAT_DEFAULTS.get(ci_cat, "Web Based Application"),
+            "category": category,
+            "open_hour": open_hour,
+        }
+
+        record = {
+            "id": incident_id,
+            "title": title.strip(),
+            "reported_severity": reported_severity,
+            "created_at": datetime.now().strftime("%H:%M:%S"),
+            "incident_text": incident_text,
+            "ticket_fields": ticket_fields,
+        }
 
             st.divider()
             st.markdown(f"##### Running pipeline for `{incident_id}`")
