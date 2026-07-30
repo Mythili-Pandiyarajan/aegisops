@@ -634,7 +634,7 @@ if submitted:
             "open_hour": open_hour,
         }
 
-                record = {
+        record = {
             "id": incident_id,
             "title": title.strip(),
             "reported_severity": reported_severity,
