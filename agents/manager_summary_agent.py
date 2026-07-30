@@ -1,56 +1,153 @@
 """
-Manager Summary Agent — final node. Produces a human-readable summary:
-root cause, fix, time taken, priority, confidence, risk. This is what a
-manager or on-call lead would actually read.
+Manager Summary Agent
+
+Produces an executive summary for managers by combining
+the outputs of all previous agents.
 """
 
 from graph.state import AegisOpsState
 
-# Categories where even a moderate-confidence issue deserves extra
-# caution -- security incidents in particular carry asymmetric downside
-# if under-escalated.
 HIGH_SENSITIVITY_CATEGORIES = {"security", "database"}
 
 
 def _derive_risk_level(state: AegisOpsState) -> str:
-    """
-    Deliberately simple, explainable rule rather than a second LLM call --
-    risk classification should be auditable, not another black box on
-    top of the ones already in the pipeline.
-    """
+
     priority = state.get("predicted_priority")
+
     category = state.get("predicted_category")
+
     priority_conf = state.get("priority_confidence") or 0.0
+
     category_conf = state.get("category_confidence") or 0.0
+
     needs_review = state.get("needs_human_review", False)
 
-    low_confidence = priority_conf < 0.6 or category_conf < 0.6
+    low_confidence = (
+        priority_conf < 0.60 or
+        category_conf < 0.60
+    )
 
-    if priority == "P2" and category in HIGH_SENSITIVITY_CATEGORIES:
+    if priority == "P1":
         return "critical"
+
+    if (
+        priority == "P2"
+        and category in HIGH_SENSITIVITY_CATEGORIES
+    ):
+        return "critical"
+
     if priority == "P2":
         return "high"
+
     if needs_review or low_confidence:
         return "high"
+
     if priority == "P3":
         return "medium"
+
     return "low"
 
 
-def run_manager_summary_agent(state: AegisOpsState) -> dict:
-    risk_level = _derive_risk_level(state)
+###############################################################
 
-    summary = (
-        f"Priority: {state.get('predicted_priority')} "
-        f"(confidence {state.get('priority_confidence')})\n"
-        f"Category: {state.get('predicted_category')}\n"
-        f"Risk level: {risk_level}\n"
-        f"Root cause: {state.get('suspected_root_cause')}\n"
-        f"Command output: {state.get('command_output')}\n"
-        f"Ticket: {state.get('ticket_payload')}\n"
+
+def run_manager_summary_agent(
+        state: AegisOpsState
+):
+
+    risk = _derive_risk_level(state)
+
+    priority = state.get("predicted_priority", "Unknown")
+
+    priority_conf = state.get(
+        "priority_confidence",
+        0.0,
     )
 
+    category = state.get(
+        "predicted_category",
+        "Unknown",
+    )
+
+    category_conf = state.get(
+        "category_confidence",
+        0.0,
+    )
+
+    root = state.get(
+        "suspected_root_cause",
+        "Not available",
+    )
+
+    evidence = state.get(
+        "log_findings",
+        "No evidence available.",
+    )
+
+    command = state.get(
+        "proposed_command",
+        "None",
+    )
+
+    ticket = state.get(
+        "ticket_payload",
+        {}
+    )
+
+    approval = (
+        "Pending Human Approval"
+        if state.get("approval_required")
+        else "Not Required"
+    )
+
+    ###########################################################
+
+    summary = f"""
+==============================
+AEGISOPS INCIDENT SUMMARY
+==============================
+
+Priority
+--------
+{priority} (Confidence: {priority_conf:.2f})
+
+Category
+--------
+{category} (Confidence: {category_conf:.2f})
+
+Risk Level
+----------
+{risk.upper()}
+
+Root Cause
+----------
+{root}
+
+Supporting Log Evidence
+-----------------------
+{evidence}
+
+Recommended Diagnostic Command
+------------------------------
+{command}
+
+Approval Status
+---------------
+{approval}
+
+Ticket
+------
+{ticket}
+
+==============================
+End of Summary
+==============================
+"""
+
     return {
-        "manager_summary": summary,
-        "risk_level": risk_level,
+
+        "manager_summary": summary.strip(),
+
+        "risk_level": risk,
+
     }
