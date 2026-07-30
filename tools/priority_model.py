@@ -2,12 +2,20 @@
 Wraps the trained ITSM XGBoost Priority Auto-Tag model (Task 3) + its
 StandardScaler as plain functions, for use inside agents/priority_predictor.py.
 
-FIXED (see conversation / commit notes): the four categorical option lists
-below are now in the exact alphabetical order sklearn's LabelEncoder assigns
-at fit time (LabelEncoder.classes_ is always sorted). The previous version
-hardcoded these lists in arbitrary/UI order, which silently mismatched the
-training-time encoding for every categorical feature -- most importantly
-Category, the single highest-importance feature in the model (~43%).
+FIXED FOR REAL (see itsm_incident_ml.ipynb, cell 45): the four categorical
+option lists below are now the ACTUAL LabelEncoder.classes_ values from
+training -- i.e. df[col].fillna('Unknown').astype(str), sorted -- verified
+directly against itsm_data.csv, not guessed or reconstructed from a UI
+mockup. The previous version of this file (see priority_model_original.py)
+had lists like ['Application','Database','Hardware',...] for CI_Cat and
+['change','incident','problem','service request'] for Category -- neither
+of which occurs anywhere in the real training data. Because LabelEncoder
+was fit directly on the messy raw column values (lowercase category names
+like 'application'/'subapplication', ticket types like 'request for
+information', Closure_Code values like 'No error - works as designed'),
+every one of those four features was almost certainly being silently
+encoded as a near-constant value for every prediction. This file replaces
+those lists with the verified real classes.
 
 IMPORTANT LIMITATION (documented on purpose, not hidden):
 The model was trained on structured ticket fields. Four of them --
@@ -19,12 +27,15 @@ incidents will be lower than the 0.82 test accuracy reported for the original
 (post-resolution) feature set. Say this plainly in the README rather than
 implying equivalent performance.
 
-NOTE: CI_Subcat is NOT collected by the current intake form even though it's
-the #2 most important feature (~16.6%). It's currently defaulted to a fixed
-placeholder regardless of the selected CI_Cat, which can bias predictions
-toward whatever category that placeholder subcat is most associated with in
-training data. Worth adding a CI_Subcat field to the form, or at minimum
-mapping a sensible default subcat per CI_Cat instead of one global constant.
+NOTE: Priority class 1 was dropped during training (only 3 samples in the
+whole 46k-row dataset -- not enough to model reliably). The trained model
+can only ever output P2-P5; there is no P1 in PRIORITY_LABELS on purpose.
+
+NOTE: CI_Subcat is collected via a CI_Cat -> most-common-subcat default
+mapping in the Streamlit app (CI_SUBCAT_DEFAULTS), rather than a single
+global constant, since it's the #2 most important feature (~16.6%) and a
+single hardcoded constant biased every prediction toward whatever category
+that placeholder subcat is most associated with in training data.
 """
 
 import pickle
@@ -43,11 +54,42 @@ FEATURE_COLS = [
     'Is_Weekend', 'Is_BusinessHour'
 ]
 
-# Reordered to match LabelEncoder's alphabetical fit order from training.
-CI_CAT_OPTIONS = ['Application', 'Database', 'Hardware', 'Infrastructure', 'Network', 'Security', 'Software']
-CI_SUBCAT_OPTIONS = ['Desktop App', 'Firewall', 'Router', 'Server', 'Storage', 'Switch', 'VM', 'Web Based Application']
-CATEGORY_OPTIONS = ['change', 'incident', 'problem', 'service request']
-CLOSURE_OPTIONS = ['Cancelled', 'Closed', 'Duplicate', 'Other', 'Resolved']
+# Verified against itsm_data.csv: sorted(df[col].fillna('Unknown').astype(str).unique())
+# This is exactly what sklearn's LabelEncoder.fit() produces as .classes_ --
+# do not reorder or hand-edit these; regenerate from the CSV if the training
+# data ever changes.
+CI_CAT_OPTIONS = [
+    'Phone', 'Unknown', 'application', 'applicationcomponent', 'computer',
+    'database', 'displaydevice', 'hardware', 'networkcomponents',
+    'officeelectronics', 'software', 'storage', 'subapplication',
+]
+
+CI_SUBCAT_OPTIONS = [
+    'Application Server', 'Automation Software', 'Banking Device', 'Citrix',
+    'Client Based Application', 'Controller', 'DataCenterEquipment', 'Database',
+    'Database Software', 'Desktop', 'Desktop Application', 'ESX Cluster',
+    'ESX Server', 'Encryption', 'Exchange', 'Firewall', 'IPtelephony',
+    'Instance', 'Iptelephony', 'KVM Switches', 'Keyboard', 'Laptop', 'Lines',
+    'Linux Server', 'MQ Queue Manager', 'MigratieDummy', 'Modem', 'Monitor',
+    'Neoview Server', 'Net Device', 'Network Component', 'NonStop Harddisk',
+    'NonStop Server', 'NonStop Storage', 'Number', 'Omgeving', 'Oracle Server',
+    'Printer', 'Protocol', 'RAC Service', 'Router', 'SAN', 'SAP', 'Scanner',
+    'Security Software', 'Server Based Application', 'SharePoint Farm',
+    'Standard Application', 'Switch', 'System Software', 'Tape Library',
+    'Thin Client', 'UPS', 'Unix Server', 'Unknown', 'VDI', 'VMWare',
+    'Virtual Tape Server', 'Web Based Application', 'Windows Server',
+    'Windows Server in extern beheer', 'X86 Server', 'zOS Cluster',
+    'zOS Server', 'zOS Systeem',
+]
+
+CATEGORY_OPTIONS = ['complaint', 'incident', 'request for change', 'request for information']
+
+CLOSURE_OPTIONS = [
+    'Data', 'Hardware', 'Inquiry', 'Kwaliteit van de output',
+    'No error - works as designed', 'Operator error', 'Other', 'Overig',
+    'Questions', 'Referred', 'Software', 'Unknown', 'User error',
+    'User manual not used',
+]
 
 PRIORITY_LABELS = {2: 'P2', 3: 'P3', 4: 'P4', 5: 'P5'}
 
@@ -70,10 +112,16 @@ def _load_models():
 
 
 def _encode_label(val: str, options: list) -> int:
+    """
+    Look up val's training-time encoded index. Falls back to the index of
+    'Unknown' (a real class the encoder was trained on, from filled NaNs)
+    rather than a hardcoded 0 -- 0 is just whatever happens to sort first
+    alphabetically for that column, which is not a meaningful default.
+    """
     try:
         return options.index(val)
     except ValueError:
-        return 0
+        return options.index("Unknown") if "Unknown" in options else 0
 
 
 def build_feature_vector(
