@@ -1,3 +1,4 @@
+from langchain_core.runnables import RunnableLambda
 from groq import Groq
 from dotenv import load_dotenv
 import os
@@ -9,22 +10,19 @@ client = Groq(
 )
 
 
-def llm(prompt):
+def groq_call(prompt):
 
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
             {
-                "role": "system",
-                "content": "You are an expert SOC incident analyst."
-            },
-            {
                 "role": "user",
                 "content": prompt
             }
-        ],
-        temperature=0.2,
-        max_tokens=1000
+        ]
     )
 
     return response.choices[0].message.content
+
+
+llm = RunnableLambda(groq_call)
