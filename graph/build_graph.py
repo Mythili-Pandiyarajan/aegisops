@@ -43,10 +43,10 @@ def build_graph():
     graph.add_node("category_classifier", run_category_classifier)
     graph.add_node("merge_node", merge_priority_and_category)
     graph.add_node("rag_agent", run_rag_agent)
-    graph.add_node("log_analysis_agent", run_log_analysis_agent)
+    graph.add_node("log_analysis", run_log_analysis_agent)
     graph.add_node("shell_agent", run_shell_agent)
     graph.add_node("ticket_generator", run_ticket_generator)
-    graph.add_node("manager_summary_agent", run_manager_summary_agent)
+    graph.add_node("manager_summary", run_manager_summary_agent)
 
     # Fan out from START into both branches — LangGraph runs them
     # concurrently since neither depends on the other's output.
@@ -58,9 +58,9 @@ def build_graph():
 
     graph.add_edge("merge_node", "rag_agent")
     graph.add_edge("rag_agent", "log_analysis_agent")
-    graph.add_edge("log_analysis_agent", "shell_agent")
+    graph.add_edge("log_analysis", "shell_agent")
     graph.add_edge("shell_agent", "ticket_generator")
     graph.add_edge("ticket_generator", "manager_summary_agent")
-    graph.add_edge("manager_summary_agent", END)
+    graph.add_edge("manager_summary", END)
 
     return graph.compile()
