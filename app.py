@@ -642,7 +642,6 @@ if submitted:
             "incident_text": incident_text,
             "ticket_fields": ticket_fields,
         }
-
             st.divider()
             st.markdown(f"##### Running pipeline for `{incident_id}`")
             try:
