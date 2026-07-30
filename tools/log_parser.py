@@ -1,107 +1,309 @@
 """
-Lightweight log search tool for the Log Analysis Agent.
+Production-ready log parser for AegisOps.
 
-Deliberately simple line-based matching rather than a full log-parsing
-framework -- for a portfolio-scale project, a transparent keyword/severity
-match that you can explain line-by-line in an interview is more defensible
-than an opaque "smart" parser you can't fully account for.
-
-DESIGN NOTES (learned from testing):
-1. Incident-text keywords are weighted higher than category keywords.
-   The predicted_category comes from an LLM classifier that can be
-   wrong -- trusting it equally can let a misclassification's keywords
-   drown out log lines that are actually relevant to the real incident.
-2. A MIN_RELEVANCE_SCORE floor exists so that when NOTHING genuinely
-   relevant is found (e.g. no log file covers this incident type), the
-   agent reports that honestly instead of confidently reasoning from
-   whatever severity-marked lines happen to exist elsewhere. A line that
-   only scores from a bare severity marker, with zero keyword overlap to
-   the actual incident, is noise, not evidence.
+Features
+--------
+✓ Supports uploaded log files
+✓ Falls back to sample logs (optional)
+✓ Weighted relevance scoring
+✓ Incident keyword matching
+✓ Category keyword matching
+✓ Severity scoring
+✓ Multi-log support
+✓ No hallucinations when no evidence exists
 """
 
-import re
-from collections import defaultdict
 from pathlib import Path
+from collections import defaultdict
+import re
+
+##############################################################
+# Demo sample logs
+##############################################################
 
 LOG_DIR = Path(__file__).resolve().parent.parent / "data" / "sample_logs"
-LOG_FILES = ["server.log", "nginx_sample.log", "docker.log", "mail_relay.log"]
 
-SEVERITY_MARKERS = re.compile(
-    r"\b(ERROR|CRITICAL|OOMKilled|Out of memory|timed out|rejecting|failed|"
-    r"deferred|blocked|refused)\b",
-    re.IGNORECASE,
-)
+DEFAULT_LOGS = [
+    "server.log",
+    "docker.log",
+    "nginx_sample.log",
+    "mail_relay.log",
+]
+
+##############################################################
+# Keyword dictionaries
+##############################################################
 
 CATEGORY_KEYWORDS = {
-    "network": ["vpn", "session", "concentrator", "link status", "radius"],
-    "hardware": ["memory", "oom", "disk", "cpu", "thermal"],
-    "database": ["upstream", "timed out", "connection pool", "query", "504"],
-    "security": ["auth", "login", "failed", "unauthorized", "sshd"],
-    "email": ["mail", "smtp", "relay", "bounce", "blocklist", "postfix", "spamhaus", "deferred"],
+
+    "security":[
+        "login",
+        "authentication",
+        "auth",
+        "password",
+        "failed",
+        "ssh",
+        "sshd",
+        "credential",
+        "unauthorized",
+        "vpn",
+        "radius",
+    ],
+
+    "database":[
+        "mysql",
+        "postgres",
+        "query",
+        "connection",
+        "timeout",
+        "deadlock",
+        "sql",
+        "504",
+    ],
+
+    "application":[
+        "nginx",
+        "http",
+        "api",
+        "500",
+        "502",
+        "503",
+        "upstream",
+        "tomcat",
+    ],
+
+    "hardware":[
+        "memory",
+        "cpu",
+        "disk",
+        "oom",
+        "thermal",
+        "filesystem",
+    ],
+
+    "network":[
+        "packet",
+        "latency",
+        "dns",
+        "gateway",
+        "vpn",
+        "icmp",
+        "firewall",
+        "switch",
+    ],
+
+    "email":[
+        "smtp",
+        "relay",
+        "mail",
+        "postfix",
+        "spamhaus",
+        "bounce",
+    ]
 }
 
-INCIDENT_KEYWORD_WEIGHT = 2
-CATEGORY_KEYWORD_WEIGHT = 1
-SEVERITY_WEIGHT = 2
+##############################################################
+# Severity markers
+##############################################################
 
-MAX_LINES_PER_SOURCE = 4
+SEVERITY = [
 
-# a line must have at least one real keyword hit (not just a bare
-# severity marker) to count as genuine evidence, not noise.
-MIN_KEYWORD_HITS = 1
+    "critical",
+
+    "fatal",
+
+    "panic",
+
+    "error",
+
+    "failed",
+
+    "timeout",
+
+    "timed out",
+
+    "refused",
+
+    "unreachable",
+
+    "oom",
+
+    "oomkilled",
+
+    "blocked",
+
+    "denied",
+
+]
+
+##############################################################
 
 
-def _read_all_lines() -> list:
-    lines = []
-    for filename in LOG_FILES:
-        path = LOG_DIR / filename
-        if not path.exists():
-            continue
-        with open(path) as f:
-            for line in f:
-                lines.append((filename, line.rstrip("\n")))
-    return lines
+def _load_lines(log_path):
+
+    if not Path(log_path).exists():
+
+        return []
+
+    with open(log_path,"r",errors="ignore") as f:
+
+        return [x.strip() for x in f.readlines()]
 
 
-def search_logs(incident_text: str, category: str = None, max_lines: int = 12) -> list:
-    """
-    Returns up to max_lines log lines relevant to the incident, as a list
-    of (source_file, line) tuples, most-relevant first, diversified across
-    log sources. Returns an empty list if nothing has genuine keyword
-    relevance (severity markers alone don't count) -- callers should treat
-    an empty result as "no relevant log evidence available", not retry
-    with a looser search.
-    """
-    category_keywords = set(k.lower() for k in CATEGORY_KEYWORDS.get(category, []))
-    incident_keywords = set(w.lower() for w in re.findall(r"[a-zA-Z0-9]{3,}", incident_text))
+##############################################################
 
-    scored = []
-    for filename, line in _read_all_lines():
-        lower = line.lower()
-        keyword_hits = (
-            sum(1 for kw in incident_keywords if kw in lower)
-            + sum(1 for kw in category_keywords if kw in lower)
+
+def _score_line(line,incident_keywords,category_keywords):
+
+    score=0
+
+    lower=line.lower()
+
+    keyword_hits=0
+
+    for k in incident_keywords:
+
+        if k in lower:
+
+            score+=4
+
+            keyword_hits+=1
+
+    for k in category_keywords:
+
+        if k in lower:
+
+            score+=2
+
+            keyword_hits+=1
+
+    for sev in SEVERITY:
+
+        if sev in lower:
+
+            score+=3
+
+    return score,keyword_hits
+
+
+##############################################################
+
+
+def search_logs(
+        incident_text,
+        category=None,
+        uploaded_log_path=None,
+        max_lines=10,
+):
+
+    incident_keywords=set(
+
+        re.findall(
+
+            r"[A-Za-z0-9]{3,}",
+
+            incident_text.lower()
+
         )
-        if keyword_hits < MIN_KEYWORD_HITS:
-            continue  # severity marker alone isn't enough -- skip pure noise
 
-        score = 0
-        if SEVERITY_MARKERS.search(line):
-            score += SEVERITY_WEIGHT
-        score += INCIDENT_KEYWORD_WEIGHT * sum(1 for kw in incident_keywords if kw in lower)
-        score += CATEGORY_KEYWORD_WEIGHT * sum(1 for kw in category_keywords if kw in lower)
-        scored.append((score, filename, line))
+    )
 
-    scored.sort(key=lambda x: x[0], reverse=True)
+    category_keywords=set(
 
-    results = []
-    per_source_count = defaultdict(int)
-    for score, filename, line in scored:
-        if per_source_count[filename] >= MAX_LINES_PER_SOURCE:
+        CATEGORY_KEYWORDS.get(category,[])
+
+    )
+
+    ##########################################################
+
+    files=[]
+
+    if uploaded_log_path:
+
+        files=[Path(uploaded_log_path)]
+
+    else:
+
+        files=[LOG_DIR/x for x in DEFAULT_LOGS]
+
+    ##########################################################
+
+    candidates=[]
+
+    per_source=defaultdict(int)
+
+    for file in files:
+
+        for line in _load_lines(file):
+
+            score,hits=_score_line(
+
+                line,
+
+                incident_keywords,
+
+                category_keywords,
+
+            )
+
+            if hits==0:
+
+                continue
+
+            candidates.append(
+
+                (
+
+                    score,
+
+                    file.name,
+
+                    line,
+
+                )
+
+            )
+
+    ##########################################################
+
+    if len(candidates)==0:
+
+        return []
+
+    ##########################################################
+
+    candidates.sort(
+
+        key=lambda x:x[0],
+
+        reverse=True,
+
+    )
+
+    results=[]
+
+    for score,source,line in candidates:
+
+        if per_source[source]>=4:
+
             continue
-        results.append((filename, line))
-        per_source_count[filename] += 1
-        if len(results) >= max_lines:
+
+        results.append(
+
+            (
+
+                source,
+
+                line,
+
+            )
+
+        )
+
+        per_source[source]+=1
+
+        if len(results)>=max_lines:
+
             break
 
     return results
