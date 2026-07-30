@@ -3,25 +3,29 @@ Production-ready log parser for AegisOps.
 
 Features
 --------
-✓ Supports uploaded log files
-✓ Falls back to sample logs (optional)
+✓ Uploaded log support
+✓ Category-aware filtering
 ✓ Weighted relevance scoring
-✓ Incident keyword matching
-✓ Category keyword matching
-✓ Severity scoring
+✓ Prevents unrelated log selection
 ✓ Multi-log support
-✓ No hallucinations when no evidence exists
+✓ No hallucinated evidence
 """
 
 from pathlib import Path
 from collections import defaultdict
 import re
 
+
 ##############################################################
-# Demo sample logs
+# Log directory
 ##############################################################
 
-LOG_DIR = Path(__file__).resolve().parent.parent / "data" / "sample_logs"
+LOG_DIR = (
+    Path(__file__).resolve().parent.parent
+    / "data"
+    / "sample_logs"
+)
+
 
 DEFAULT_LOGS = [
     "server.log",
@@ -30,38 +34,43 @@ DEFAULT_LOGS = [
     "mail_relay.log",
 ]
 
+
 ##############################################################
-# Keyword dictionaries
+# Category keywords
 ##############################################################
 
 CATEGORY_KEYWORDS = {
 
-    "security":[
+    "security": [
         "login",
         "authentication",
         "auth",
         "password",
-        "failed",
+        "failed password",
+        "invalid user",
         "ssh",
         "sshd",
         "credential",
         "unauthorized",
+        "account",
+        "brute",
         "vpn",
         "radius",
     ],
 
-    "database":[
+
+    "database": [
         "mysql",
         "postgres",
-        "query",
-        "connection",
-        "timeout",
-        "deadlock",
         "sql",
-        "504",
+        "deadlock",
+        "query",
+        "database",
+        "connection pool",
     ],
 
-    "application":[
+
+    "application": [
         "nginx",
         "http",
         "api",
@@ -70,124 +79,174 @@ CATEGORY_KEYWORDS = {
         "503",
         "upstream",
         "tomcat",
+        "application",
     ],
 
-    "hardware":[
+
+    "hardware": [
         "memory",
         "cpu",
         "disk",
-        "oom",
-        "thermal",
         "filesystem",
+        "oom",
+        "storage",
     ],
 
-    "network":[
+
+    "network": [
         "packet",
         "latency",
         "dns",
         "gateway",
-        "vpn",
-        "icmp",
         "firewall",
-        "switch",
+        "icmp",
+        "vpn",
     ],
 
-    "email":[
+
+    "email": [
         "smtp",
         "relay",
-        "mail",
         "postfix",
+        "mail",
         "spamhaus",
         "bounce",
-    ]
+    ],
 }
 
+
+
 ##############################################################
-# Severity markers
+# File priority by category
+##############################################################
+
+CATEGORY_LOG_PRIORITY = {
+
+    "security": [
+        "server.log",
+        "auth.log",
+        "secure.log",
+    ],
+
+
+    "application": [
+        "nginx_sample.log",
+        "server.log",
+    ],
+
+
+    "database": [
+        "server.log",
+    ],
+
+
+    "hardware": [
+        "server.log",
+        "docker.log",
+    ],
+
+
+    "network": [
+        "server.log",
+    ],
+
+
+    "email": [
+        "mail_relay.log",
+    ],
+}
+
+
+
+##############################################################
+# Severity words
 ##############################################################
 
 SEVERITY = [
 
     "critical",
-
     "fatal",
-
     "panic",
-
     "error",
-
     "failed",
-
     "timeout",
-
-    "timed out",
-
     "refused",
-
-    "unreachable",
-
-    "oom",
-
-    "oomkilled",
-
-    "blocked",
-
     "denied",
+    "blocked",
+    "unreachable",
 
 ]
 
+
+
+##############################################################
+# Load logs
 ##############################################################
 
+def _load_lines(path):
 
-def _load_lines(log_path):
-
-    if not Path(log_path).exists():
+    if not Path(path).exists():
 
         return []
 
-    with open(log_path,"r",errors="ignore") as f:
+    with open(
+        path,
+        "r",
+        errors="ignore"
+    ) as f:
 
-        return [x.strip() for x in f.readlines()]
+        return [
+            line.strip()
+            for line in f.readlines()
+        ]
+
 
 
 ##############################################################
+# Score log line
+##############################################################
+
+def _score_line(
+        line,
+        incident_keywords,
+        category_keywords
+):
+
+    score = 0
+
+    lower = line.lower()
 
 
-def _score_line(line,incident_keywords,category_keywords):
+    for word in incident_keywords:
 
-    score=0
+        if word in lower:
 
-    lower=line.lower()
+            score += 3
 
-    keyword_hits=0
 
-    for k in incident_keywords:
 
-        if k in lower:
+    for word in category_keywords:
 
-            score+=4
+        if word in lower:
 
-            keyword_hits+=1
+            score += 5
 
-    for k in category_keywords:
 
-        if k in lower:
-
-            score+=2
-
-            keyword_hits+=1
 
     for sev in SEVERITY:
 
         if sev in lower:
 
-            score+=3
+            score += 1
 
-    return score,keyword_hits
+
+    return score
+
 
 
 ##############################################################
-
+# Search logs
+##############################################################
 
 def search_logs(
         incident_text,
@@ -196,47 +255,73 @@ def search_logs(
         max_lines=10,
 ):
 
-    incident_keywords=set(
+
+    incident_keywords = set(
 
         re.findall(
-
-            r"[A-Za-z0-9]{3,}",
-
+            r"[a-zA-Z0-9]{3,}",
             incident_text.lower()
-
         )
 
     )
 
-    category_keywords=set(
 
-        CATEGORY_KEYWORDS.get(category,[])
+    category_keywords = set(
+
+        CATEGORY_KEYWORDS.get(
+            category,
+            []
+        )
 
     )
 
-    ##########################################################
 
-    files=[]
+
+    ##########################################################
+    # Select files
+    ##########################################################
 
     if uploaded_log_path:
 
-        files=[Path(uploaded_log_path)]
+        files = [
+            Path(uploaded_log_path)
+        ]
 
     else:
 
-        files=[LOG_DIR/x for x in DEFAULT_LOGS]
+        files = []
+
+
+        # category priority first
+
+        priority_logs = CATEGORY_LOG_PRIORITY.get(
+            category,
+            DEFAULT_LOGS
+        )
+
+
+        for log in priority_logs:
+
+            files.append(
+                LOG_DIR / log
+            )
+
+
 
     ##########################################################
+    # Collect candidates
+    ##########################################################
 
-    candidates=[]
+    candidates = []
 
-    per_source=defaultdict(int)
 
     for file in files:
 
+
         for line in _load_lines(file):
 
-            score,hits=_score_line(
+
+            score = _score_line(
 
                 line,
 
@@ -246,64 +331,74 @@ def search_logs(
 
             )
 
-            if hits==0:
 
-                continue
+            if score > 0:
 
-            candidates.append(
+                candidates.append(
 
-                (
-
-                    score,
-
-                    file.name,
-
-                    line,
+                    (
+                        score,
+                        file.name,
+                        line
+                    )
 
                 )
 
-            )
+
 
     ##########################################################
+    # No evidence
+    ##########################################################
 
-    if len(candidates)==0:
+    if not candidates:
 
         return []
 
+
+
+    ##########################################################
+    # Rank
     ##########################################################
 
     candidates.sort(
-
         key=lambda x:x[0],
-
-        reverse=True,
-
+        reverse=True
     )
+
+
 
     results=[]
 
+    source_count=defaultdict(int)
+
+
+
     for score,source,line in candidates:
 
-        if per_source[source]>=4:
+
+        if source_count[source] >= 5:
 
             continue
+
 
         results.append(
 
             (
-
                 source,
-
-                line,
-
+                line
             )
 
         )
 
-        per_source[source]+=1
+
+        source_count[source]+=1
+
+
 
         if len(results)>=max_lines:
 
             break
+
+
 
     return results
