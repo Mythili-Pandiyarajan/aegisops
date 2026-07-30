@@ -1,161 +1,224 @@
 """
-The command allowlist for the Shell Agent.
+AegisOps Sandbox Command Allowlist
 
-The LLM never generates shell commands.
-It only selects an allowlisted command name and, if required,
-provides a validated parameter.
-
-All commands are read-only diagnostics.
+Security Rules:
+----------------
+- LLM never creates shell commands.
+- Shell Agent selects only command names.
+- This module builds validated read-only commands.
+- No destructive commands allowed.
 """
 
 import re
 
-# -------------------------------------------------------------
-# Validation patterns
-# -------------------------------------------------------------
 
-HOST_PATTERN = re.compile(r"^[a-zA-Z0-9.\-]+$")
-SERVICE_PATTERN = re.compile(r"^[a-zA-Z0-9_\-]+$")
-USER_PATTERN = re.compile(r"^[a-zA-Z0-9._\-]+$")
+# ============================================================
+# Validation Patterns
+# ============================================================
 
-# -------------------------------------------------------------
-# Allowlisted commands
-# name -> (template, validation_regex)
-# -------------------------------------------------------------
+HOST_PATTERN = re.compile(
+    r"^[a-zA-Z0-9.\-_]+$"
+)
+
+SERVICE_PATTERN = re.compile(
+    r"^[a-zA-Z0-9_\-]+$"
+)
+
+USER_PATTERN = re.compile(
+    r"^[a-zA-Z0-9._\-@]+$"
+)
+
+CONTAINER_PATTERN = re.compile(
+    r"^[a-zA-Z0-9._\-]+$"
+)
+
+
+# ============================================================
+# Allowed Commands
+# ============================================================
 
 ALLOWED_COMMANDS = {
 
-    # -----------------------------
-    # Network
-    # -----------------------------
+
+    # -------------------------
+    # Network Diagnostics
+    # -------------------------
+
     "ping": (
         "ping -c 4 {target}",
         HOST_PATTERN,
     ),
+
 
     "traceroute": (
         "traceroute {target}",
         HOST_PATTERN,
     ),
 
+
     "ipconfig": (
         "ip addr show",
         None,
     ),
 
-    # -----------------------------
-    # Disk / Hardware
-    # -----------------------------
+
+
+    # -------------------------
+    # Hardware Diagnostics
+    # -------------------------
+
     "disk_usage": (
         "df -h",
         None,
     ),
+
 
     "memory_usage": (
         "free -m",
         None,
     ),
 
+
     "cpu_usage": (
-        "top -n 1",
+        "top -b -n 1",
         None,
     ),
 
-    # -----------------------------
-    # Services
-    # -----------------------------
+
+
+    # -------------------------
+    # Service Diagnostics
+    # -------------------------
+
     "service_status": (
         "systemctl status {service}",
         SERVICE_PATTERN,
     ),
 
+
     "journal": (
-        "journalctl -u {service}",
+        "journalctl -u {service} --no-pager",
         SERVICE_PATTERN,
     ),
 
-    # -----------------------------
-    # Docker
-    # -----------------------------
+
+
+    # -------------------------
+    # Docker Diagnostics
+    # -------------------------
+
     "docker_ps": (
         "docker ps",
         None,
     ),
 
+
     "docker_logs": (
         "docker logs {target}",
-        HOST_PATTERN,
+        CONTAINER_PATTERN,
     ),
 
-    # -----------------------------
-    # Authentication / Security
-    # -----------------------------
+
+
+    # -------------------------
+    # Security Diagnostics
+    # -------------------------
+
     "failed_logins": (
         "grep 'Failed password' /var/log/auth.log",
         None,
     ),
 
+
     "ssh_logs": (
-        "journalctl -u ssh",
+        "journalctl -u sshd --no-pager",
         None,
     ),
+
 
     "faillock": (
         "faillock --user {target}",
         USER_PATTERN,
     ),
 
-    # -----------------------------
+
+
+    # -------------------------
     # Database
-    # -----------------------------
+    # -------------------------
+
     "mysql_ping": (
         "mysqladmin ping",
         None,
     ),
 
-    # -----------------------------
-    # Mail
-    # -----------------------------
+
+
+    # -------------------------
+    # Email
+    # -------------------------
+
     "mail_queue": (
         "mailq",
         None,
     ),
+
 }
 
 
-# -------------------------------------------------------------
+
+# ============================================================
 # Exception
-# -------------------------------------------------------------
+# ============================================================
 
 class CommandNotAllowedError(Exception):
     pass
 
 
-# -------------------------------------------------------------
-# Safe builder
-# -------------------------------------------------------------
 
-def build_command(name: str, target: str | None = None) -> str:
+# ============================================================
+# Secure Command Builder
+# ============================================================
+
+def build_command(
+        name: str,
+        target: str | None = None
+) -> str:
+
 
     if name not in ALLOWED_COMMANDS:
+
         raise CommandNotAllowedError(
-            f"'{name}' is not allowlisted."
+            f"Command '{name}' is not allowlisted."
         )
 
-    template, pattern = ALLOWED_COMMANDS[name]
 
-    if pattern is None:
+    template, validator = ALLOWED_COMMANDS[name]
+
+
+    # Commands without parameters
+
+    if validator is None:
+
         return template
 
+
+
+    # Commands requiring parameters
+
     if target is None:
+
         raise CommandNotAllowedError(
-            f"Command '{name}' requires a target."
+            f"Command '{name}' requires a validated target."
         )
 
-    if not pattern.fullmatch(target):
+
+    if not validator.fullmatch(target):
+
         raise CommandNotAllowedError(
-            f"Target '{target}' failed validation."
+            f"Invalid target: {target}"
         )
+
 
     return template.format(
         target=target,
