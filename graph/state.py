@@ -1,28 +1,29 @@
 """
 Shared state schema for the AegisOps LangGraph pipeline.
 
-Every node reads from and writes to this single typed state object.
-Keeping it explicit (rather than a free-form dict) makes the
-graph auditable and easier to debug.
+All agents read/write through this state object.
+
+Flow:
+
+Incident
+   |
+Priority Predictor
+Category Classifier
+   |
+Merge
+   |
+RAG Agent
+   |
+Log Analysis Agent
+   |
+Shell Agent
+   |
+Ticket Generator
+   |
+Manager Summary
 """
 
-from typing import TypedDict, Optional, List, Literal
-
-IncidentCategory = Literal[
-    "network",
-    "hardware",
-    "database",
-    "security",
-    "email",
-    "application",
-]
-
-RiskLevel = Literal[
-    "low",
-    "medium",
-    "high",
-    "critical",
-]
+from typing import TypedDict, Optional, List, Any
 
 
 class AegisOpsState(TypedDict, total=False):
@@ -39,34 +40,38 @@ class AegisOpsState(TypedDict, total=False):
 
     ticket_fields: Optional[dict]
 
+
     # ==========================================================
-    # PRIORITY MODEL
+    # PRIORITY PREDICTION
     # ==========================================================
 
     predicted_priority: Optional[str]
 
     priority_confidence: Optional[float]
 
+
     # ==========================================================
-    # CLASSIFIER
+    # CATEGORY CLASSIFICATION
     # ==========================================================
 
-    predicted_category: Optional[IncidentCategory]
+    predicted_category: Optional[str]
 
     category_confidence: Optional[float]
 
     needs_human_review: Optional[bool]
 
+
     # ==========================================================
-    # KNOWLEDGE / RAG
+    # RAG KNOWLEDGE AGENT
     # ==========================================================
 
     retrieved_docs: Optional[List[str]]
 
     rag_summary: Optional[str]
 
+
     # ==========================================================
-    # LOG ANALYSIS
+    # LOG ANALYSIS AGENT
     # ==========================================================
 
     log_findings: Optional[str]
@@ -74,6 +79,9 @@ class AegisOpsState(TypedDict, total=False):
     suspected_root_cause: Optional[str]
 
     log_confidence: Optional[float]
+
+    llm_response: Optional[str]
+
 
     # ==========================================================
     # SHELL AGENT
@@ -91,18 +99,31 @@ class AegisOpsState(TypedDict, total=False):
 
     command_output: Optional[str]
 
+
     # ==========================================================
-    # TICKET
+    # TICKET GENERATOR
     # ==========================================================
 
     ticket_payload: Optional[dict]
 
+
     # ==========================================================
-    # FINAL SUMMARY
+    # MANAGER SUMMARY
     # ==========================================================
 
     manager_summary: Optional[str]
 
-    risk_level: Optional[RiskLevel]
+    risk_level: Optional[str]
+
+    incident_status: Optional[str]
+
+
+    # ==========================================================
+    # PIPELINE METADATA
+    # ==========================================================
+
+    current_agent: Optional[str]
+
+    error_message: Optional[str]
 
     time_taken_seconds: Optional[float]
