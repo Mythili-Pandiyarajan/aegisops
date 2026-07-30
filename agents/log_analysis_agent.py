@@ -9,8 +9,6 @@ Responsibilities
 4. Never hallucinate a root cause
 """
 
-from langchain_core.messages import HumanMessage
-
 from tools.log_parser import search_logs
 from tools.llm import llm
 
@@ -34,6 +32,7 @@ def run_log_analysis_agent(state):
 
     uploaded_log = state.get("uploaded_log_path")
 
+
     ######################################################
     # Search logs
     ######################################################
@@ -44,6 +43,7 @@ def run_log_analysis_agent(state):
         uploaded_log_path=uploaded_log,
         max_lines=10,
     )
+
 
     ######################################################
     # No evidence
@@ -64,6 +64,7 @@ def run_log_analysis_agent(state):
                 )
         }
 
+
     ######################################################
     # Build context
     ######################################################
@@ -73,8 +74,9 @@ def run_log_analysis_agent(state):
         for src, line in log_hits
     )
 
+
     ######################################################
-    # Prompt
+    # Prompt for Groq LLM
     ######################################################
 
     prompt = f"""
@@ -86,21 +88,22 @@ Never invent errors.
 
 Never mention files that are not shown.
 
-If evidence is insufficient, reply EXACTLY:
+If evidence is insufficient, reply:
 
 Insufficient log evidence to determine root cause.
 
-Incident
+Incident:
 
 {incident}
 
-Category
+Category:
 
 {category}
 
-Relevant Log Evidence
+Relevant Log Evidence:
 
 {evidence}
+
 
 Return ONLY:
 
@@ -111,22 +114,22 @@ Return ONLY:
 3. Recommended Next Diagnostic Step
 """
 
+
     ######################################################
-    # LLM
+    # Groq LLM
     ######################################################
 
-    response = llm.invoke(
+    response = llm.invoke(prompt)
 
-        [HumanMessage(content=prompt)]
 
-    )
-
+    ######################################################
+    # Update LangGraph State
     ######################################################
 
     return {
 
         "log_findings": evidence,
 
-        "suspected_root_cause": response.content,
+        "suspected_root_cause": response,
 
     }
