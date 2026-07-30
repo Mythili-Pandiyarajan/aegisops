@@ -2,20 +2,25 @@
 Wraps the trained ITSM XGBoost Priority Auto-Tag model (Task 3) + its
 StandardScaler as plain functions, for use inside agents/priority_predictor.py.
 
-FIXED FOR REAL (see itsm_incident_ml.ipynb, cell 45): the four categorical
-option lists below are now the ACTUAL LabelEncoder.classes_ values from
-training -- i.e. df[col].fillna('Unknown').astype(str), sorted -- verified
-directly against itsm_data.csv, not guessed or reconstructed from a UI
-mockup. The previous version of this file (see priority_model_original.py)
-had lists like ['Application','Database','Hardware',...] for CI_Cat and
-['change','incident','problem','service request'] for Category -- neither
-of which occurs anywhere in the real training data. Because LabelEncoder
-was fit directly on the messy raw column values (lowercase category names
-like 'application'/'subapplication', ticket types like 'request for
-information', Closure_Code values like 'No error - works as designed'),
-every one of those four features was almost certainly being silently
-encoded as a near-constant value for every prediction. This file replaces
-those lists with the verified real classes.
+FIXED: CI_CAT_OPTIONS and CATEGORY_OPTIONS below are the REAL values found
+in the training CSV (verified directly against itsm_incident_ml.ipynb's own
+dataframe output), listed in the alphabetical order LabelEncoder.fit()
+actually produces. Earlier versions of this file used plausible-sounding
+but fabricated category names (e.g. "Security", "Infrastructure") that
+never appeared in training data at all -- every real incident silently
+fell back to index 0 via the except-ValueError branch in _encode_label,
+meaning CI_Cat and Category (the model's #1 and #4 most important features,
+Category alone ~43% importance) were effectively constant for every
+prediction the deployed app ever made.
+
+STILL UNVERIFIED, NEEDS CONFIRMATION: CI_SUBCAT_OPTIONS and CLOSURE_OPTIONS
+below are based on partial evidence (visible sample rows + prior analysis),
+not an exhaustive value_counts() of the real column. Before trusting this
+in production, run in the training notebook / Colab and paste the output:
+    df['CI_Subcat'].value_counts()
+    df['Closure_Code'].value_counts()
+so the lists can be locked in against the complete, real vocabulary rather
+than a partial sample.
 
 IMPORTANT LIMITATION (documented on purpose, not hidden):
 The model was trained on structured ticket fields. Four of them --
@@ -24,18 +29,16 @@ are only known AFTER a ticket is resolved, so they don't exist yet for a
 brand-new incident. This wrapper defaults those to neutral placeholders so a
 fresh incident still gets a prediction, but accuracy on freshly-created
 incidents will be lower than the 0.82 test accuracy reported for the original
-(post-resolution) feature set. Say this plainly in the README rather than
-implying equivalent performance.
+(post-resolution) feature set -- and Priority 2 recall in particular (0.60
+on the full feature set, per the notebook's own classification_report) will
+likely be worse with these features neutralized. Say this plainly in the
+README rather than implying equivalent performance.
 
-NOTE: Priority class 1 was dropped during training (only 3 samples in the
-whole 46k-row dataset -- not enough to model reliably). The trained model
-can only ever output P2-P5; there is no P1 in PRIORITY_LABELS on purpose.
-
-NOTE: CI_Subcat is collected via a CI_Cat -> most-common-subcat default
-mapping in the Streamlit app (CI_SUBCAT_DEFAULTS), rather than a single
-global constant, since it's the #2 most important feature (~16.6%) and a
-single hardcoded constant biased every prediction toward whatever category
-that placeholder subcat is most associated with in training data.
+CI_Subcat is also NOT collected by the current intake form even though it's
+the #2 most important feature (~16.6%). It's defaulted to a single constant
+regardless of the selected CI_Cat -- worth mapping a sensible default subcat
+per CI_Cat (see CI_SUBCAT_DEFAULTS below, needs verification per the note
+above) or adding a real form field.
 """
 
 import pickle
@@ -54,42 +57,41 @@ FEATURE_COLS = [
     'Is_Weekend', 'Is_BusinessHour'
 ]
 
-# Verified against itsm_data.csv: sorted(df[col].fillna('Unknown').astype(str).unique())
-# This is exactly what sklearn's LabelEncoder.fit() produces as .classes_ --
-# do not reorder or hand-edit these; regenerate from the CSV if the training
-# data ever changes.
+# Real values confirmed directly against the training notebook's own
+# dataframe output. Alphabetical order to match LabelEncoder.fit().
 CI_CAT_OPTIONS = [
-    'Phone', 'Unknown', 'application', 'applicationcomponent', 'computer',
-    'database', 'displaydevice', 'hardware', 'networkcomponents',
-    'officeelectronics', 'software', 'storage', 'subapplication',
+    'application', 'computer', 'database', 'displaydevice', 'hardware',
+    'networkcomponents', 'officeelectronics', 'software', 'storage', 'subapplication',
 ]
-
-CI_SUBCAT_OPTIONS = [
-    'Application Server', 'Automation Software', 'Banking Device', 'Citrix',
-    'Client Based Application', 'Controller', 'DataCenterEquipment', 'Database',
-    'Database Software', 'Desktop', 'Desktop Application', 'ESX Cluster',
-    'ESX Server', 'Encryption', 'Exchange', 'Firewall', 'IPtelephony',
-    'Instance', 'Iptelephony', 'KVM Switches', 'Keyboard', 'Laptop', 'Lines',
-    'Linux Server', 'MQ Queue Manager', 'MigratieDummy', 'Modem', 'Monitor',
-    'Neoview Server', 'Net Device', 'Network Component', 'NonStop Harddisk',
-    'NonStop Server', 'NonStop Storage', 'Number', 'Omgeving', 'Oracle Server',
-    'Printer', 'Protocol', 'RAC Service', 'Router', 'SAN', 'SAP', 'Scanner',
-    'Security Software', 'Server Based Application', 'SharePoint Farm',
-    'Standard Application', 'Switch', 'System Software', 'Tape Library',
-    'Thin Client', 'UPS', 'Unix Server', 'Unknown', 'VDI', 'VMWare',
-    'Virtual Tape Server', 'Web Based Application', 'Windows Server',
-    'Windows Server in extern beheer', 'X86 Server', 'zOS Cluster',
-    'zOS Server', 'zOS Systeem',
-]
-
 CATEGORY_OPTIONS = ['complaint', 'incident', 'request for change', 'request for information']
 
+# NEEDS VERIFICATION -- see module docstring. Best-available list, not
+# confirmed against a full value_counts() of the real column yet.
+CI_SUBCAT_OPTIONS = [
+    'DataCenterEquipment', 'Desktop Application', 'Laptop', 'SAN',
+    'Server Based Application', 'System Software', 'Web Based Application',
+]
 CLOSURE_OPTIONS = [
-    'Data', 'Hardware', 'Inquiry', 'Kwaliteit van de output',
-    'No error - works as designed', 'Operator error', 'Other', 'Overig',
-    'Questions', 'Referred', 'Software', 'Unknown', 'User error',
+    'Data', 'Hardware', 'Inquiry', 'No error - works as designed', 'Operator error',
+    'Other', 'Questions', 'Referred', 'Software', 'Unknown', 'User error',
     'User manual not used',
 ]
+
+# Most-common CI_Subcat per CI_Cat (best-available; re-derive with
+# df.groupby(['CI_Cat','CI_Subcat']).size() once the real CSV is at hand,
+# and swap this in verified rather than partial).
+CI_SUBCAT_DEFAULTS = {
+    'application': 'Server Based Application',
+    'subapplication': 'Web Based Application',
+    'computer': 'Laptop',
+    'storage': 'SAN',
+    'hardware': 'DataCenterEquipment',
+    'software': 'System Software',
+    'database': 'Database',
+    'displaydevice': 'Monitor',
+    'officeelectronics': 'Printer',
+    'networkcomponents': 'Network Component',
+}
 
 PRIORITY_LABELS = {2: 'P2', 3: 'P3', 4: 'P4', 5: 'P5'}
 
@@ -112,21 +114,15 @@ def _load_models():
 
 
 def _encode_label(val: str, options: list) -> int:
-    """
-    Look up val's training-time encoded index. Falls back to the index of
-    'Unknown' (a real class the encoder was trained on, from filled NaNs)
-    rather than a hardcoded 0 -- 0 is just whatever happens to sort first
-    alphabetically for that column, which is not a meaningful default.
-    """
     try:
         return options.index(val)
     except ValueError:
-        return options.index("Unknown") if "Unknown" in options else 0
+        return 0
 
 
 def build_feature_vector(
-    ci_cat: str = "Software",
-    ci_subcat: str = "Web Based Application",
+    ci_cat: str = "software",
+    ci_subcat: str = None,
     category: str = "incident",
     reassignments: int = 0,
     interactions: int = 1,
@@ -138,6 +134,9 @@ def build_feature_vector(
     closure: str = "Other",              # unknown at creation time -- placeholder
     handle_time_hrs: float = 0.0,        # unknown at creation time -- placeholder
 ) -> list:
+    if ci_subcat is None:
+        ci_subcat = CI_SUBCAT_DEFAULTS.get(ci_cat, "Web Based Application")
+
     return [
         _encode_label(ci_cat, CI_CAT_OPTIONS),
         _encode_label(ci_subcat, CI_SUBCAT_OPTIONS),
