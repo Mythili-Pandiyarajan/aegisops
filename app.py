@@ -49,10 +49,10 @@ NODE_LABELS = {
     "category_classifier": "🏷️ Category Classifier",
     "merge_node": "🔀 Merge",
     "rag_agent": "📚 Knowledge / RAG Agent",
-    "log_analysis_agent": "🔍 Log Analysis Agent",
+    "log_analysis": "🔍 Log Analysis Agent",
     "shell_agent": "🖥️ Shell Agent",
     "ticket_generator": "🎫 Ticket Generator",
-    "manager_summary_agent": "📋 Manager Summary",
+    "manager_summary": "📋 Manager Summary",
 }
 NODE_ORDER = list(NODE_LABELS.keys())
 
@@ -300,10 +300,30 @@ def _format_node_output(node_name: str, output: dict) -> str:
     if node_name == "rag_agent":
         docs = ", ".join(output.get("retrieved_docs", [])) or "none"
         return f"**Retrieved:** {docs}\n\n**Summary:** {output.get('rag_summary')}"
-    if node_name == "log_analysis_agent":
-        return f"**Suspected root cause:**\n\n{output.get('suspected_root_cause')}"
+    if node_name == "log_analysis":
+        root_cause = output.get(
+            "suspected_root_cause",
+            "No root cause generated"
+        )
+
+        evidence = output.get(
+            "log_findings",
+            "No log evidence found"
+        )
+
+        return f"""
+**Suspected Root Cause**
+
+{root_cause}
+
+
+**Supporting Evidence**
+
+{evidence}
+"""
     if node_name == "shell_agent":
-        cmds = output.get("proposed_commands") or []
+        cmds = output.get("proposed_command")
+        cmds = [cmd] if cmd else []
         command_output = output.get("command_output")
         if not cmds:
             if command_output and str(command_output).startswith("blocked:"):
@@ -318,7 +338,7 @@ def _format_node_output(node_name: str, output: dict) -> str:
     if node_name == "ticket_generator":
         payload = output.get("ticket_payload", {})
         return f"**Ticket:** `{payload.get('incident_id')}` | {payload.get('priority')} | {payload.get('category')} | {payload.get('status')}"
-    if node_name == "manager_summary_agent":
+    if node_name == "manager_summary":
         return f"**Risk level:** {output.get('risk_level')}\n\n{output.get('manager_summary')}"
     return str(output)
 
