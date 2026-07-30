@@ -612,12 +612,16 @@ elif st.session_state.page == "intake":
             incident_id = f"INC-{datetime.now().strftime('%Y%m%d')}-{st.session_state.run_counter:03d}"
 
             incident_text = f"{title}\n\n{description}"
-            if log_file is not None:
-                try:
-                    log_text = log_file.read().decode("utf-8", errors="ignore")[:4000]
-                    incident_text += f"\n\n--- Uploaded log excerpt ---\n{log_text}"
-                except Exception:
-                    st.info("Could not read the uploaded log file as text — continuing without it.")
+
+uploaded_log_path = None
+
+if log_file is not None:
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".log") as tmp:
+            tmp.write(log_file.getvalue())
+            uploaded_log_path = tmp.name
+    except Exception as e:
+        st.warning(f"Could not save uploaded log: {e}")
 
             ticket_fields = {
                 "ci_cat": ci_cat,
@@ -638,7 +642,7 @@ elif st.session_state.page == "intake":
             st.divider()
             st.markdown(f"##### Running pipeline for `{incident_id}`")
             try:
-                state = run_pipeline(incident_text, incident_id, ticket_fields, human_approved=False)
+                state = run_pipeline(incident_text=incident_text,incident_id=incident_id,ticket_fields=ticket_fields,uploaded_log_path=uploaded_log_path,human_approved=False,)
                 record_run(record, state, success=True)
                 st.session_state.incidents.append(record)
                 save_persisted()
@@ -676,7 +680,7 @@ elif st.session_state.page == "active":
             st.write(f"**Risk level:** {i.get('risk_level') or '—'}")
             if i.get("manager_summary"):
                 st.write(f"**Manager summary:** {i['manager_summary']}")
-            if i.get("proposed_commands") and not i.get("command_output"):
+            if i.get("proposed_command") and not i.get("command_output"):
                 st.caption("A diagnostic command is awaiting approval for this incident — see Approvals Center.")
             if st.button("Mark resolved", key=f"resolve_{i['id']}"):
                 i["status"] = "resolved"
@@ -707,7 +711,7 @@ elif st.session_state.page == "approvals":
             st.markdown(f"**{i['id']} — {i['title']}**")
             st.write(f"Risk level: **{i.get('risk_level') or '—'}**  |  Category: **{i.get('predicted_category') or '—'}**")
             if i.get("proposed_commands"):
-                st.code(i["proposed_commands"][0])
+                st.code(i["proposed_commands"])
             if i.get("manager_summary"):
                 st.caption(i["manager_summary"])
             c1, c2 = st.columns([1, 3])
