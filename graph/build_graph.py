@@ -78,7 +78,7 @@ def build_graph():
     )
 
     graph.add_node(
-        "log_analysis",
+        "log_analysis_agent",
         run_log_analysis_agent
     )
 
@@ -93,7 +93,7 @@ def build_graph():
     )
 
     graph.add_node(
-        "manager_summary",
+        "manager_summary_agent",
         run_manager_summary_agent
     )
 
@@ -138,7 +138,7 @@ def build_graph():
     )
 
     graph.add_edge(
-        "log_analysis",
+        "log_analysis_agent",
         "shell_agent"
     )
 
@@ -153,7 +153,7 @@ def build_graph():
     )
 
     graph.add_edge(
-        "manager_summary",
+        "manager_summary_agent",
         END
     )
 
