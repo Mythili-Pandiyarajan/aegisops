@@ -604,82 +604,51 @@ elif st.session_state.page == "intake":
 
     submitted = st.button("🚀  Analyze & file incident", type="primary")
 
-if submitted:
-    if not title.strip() or not description.strip():
-        st.warning("Please provide at least an incident title and description before filing.")
-    else:
-        st.session_state.run_counter += 1
+    if submitted:
+        if not title.strip() or not description.strip():
+            st.warning("Please provide at least an incident title and description before filing.")
+        else:
+            st.session_state.run_counter += 1
+            incident_id = f"INC-{datetime.now().strftime('%Y%m%d')}-{st.session_state.run_counter:03d}"
 
-        incident_id = f"INC-{datetime.now().strftime('%Y%m%d')}-{st.session_state.run_counter:03d}"
+            incident_text = f"{title}\n\n{description}"
+            if log_file is not None:
+                try:
+                    log_text = log_file.read().decode("utf-8", errors="ignore")[:4000]
+                    incident_text += f"\n\n--- Uploaded log excerpt ---\n{log_text}"
+                except Exception:
+                    st.info("Could not read the uploaded log file as text — continuing without it.")
 
-        incident_text = f"{title}\n\n{description}"
+            ticket_fields = {
+                "ci_cat": ci_cat,
+                "ci_subcat": CI_SUBCAT_DEFAULTS.get(ci_cat, "Web Based Application"),
+                "category": category,
+                "open_hour": open_hour,
+            }
 
-        uploaded_log_path = None
+            record = {
+                "id": incident_id,
+                "title": title.strip(),
+                "reported_severity": reported_severity,
+                "created_at": datetime.now().strftime("%H:%M:%S"),
+                "incident_text": incident_text,
+                "ticket_fields": ticket_fields,
+            }
 
-        if log_file is not None:
+            st.divider()
+            st.markdown(f"##### Running pipeline for `{incident_id}`")
             try:
-                import tempfile
-
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".log") as tmp:
-                    tmp.write(log_file.getvalue())
-                    uploaded_log_path = tmp.name
-
+                state = run_pipeline(incident_text, incident_id, ticket_fields, human_approved=False)
+                record_run(record, state, success=True)
+                st.session_state.incidents.append(record)
+                save_persisted()
+                st.success(f"Incident `{incident_id}` filed — status: **{record['status'].replace('_',' ')}**")
+                st.button("View on dashboard →", on_click=goto, args=("dashboard",))
             except Exception as e:
-                st.warning(f"Could not save uploaded log: {e}")
-
-        ticket_fields = {
-            "ci_cat": ci_cat,
-            "ci_subcat": CI_SUBCAT_DEFAULTS.get(ci_cat, "Web Based Application"),
-            "category": category,
-            "open_hour": open_hour,
-        }
-
-        record = {
-            "id": incident_id,
-            "title": title.strip(),
-            "reported_severity": reported_severity,
-            "created_at": datetime.now().strftime("%H:%M:%S"),
-            "incident_text": incident_text,
-            "ticket_fields": ticket_fields,
-        }
-
-        st.divider()
-        st.markdown(f"##### Running pipeline for `{incident_id}`")
-
-        try:
-            state = run_pipeline(
-                incident_text=incident_text,
-                incident_id=incident_id,
-                ticket_fields=ticket_fields,
-                uploaded_log_path=uploaded_log_path,
-                human_approved=False,
-            )
-
-            record_run(record, state, success=True)
-            st.session_state.incidents.append(record)
-            save_persisted()
-
-            st.success(
-                f"Incident `{incident_id}` filed — status: **{record['status'].replace('_',' ')}**"
-            )
-
-            st.button(
-                "View on dashboard →",
-                on_click=goto,
-                args=("dashboard",),
-            )
-
-        except Exception as e:
-            record_run(record, {}, success=False)
-            st.session_state.incidents.append(
-                {
-                    **record,
-                    "status": "active",
-                    "predicted_priority": None,
-                }
-            )
-            save_persisted()
-            st.error(f"Pipeline run failed: {e}")
+                record_run(record, {}, success=False)
+                st.session_state.incidents.append({**record, "status": "active", "predicted_priority": None})
+                save_persisted()
+                st.error(f"Pipeline run failed: {e}")
 
 # =========================================================================
 # PAGE: Active Incidents
@@ -707,7 +676,7 @@ elif st.session_state.page == "active":
             st.write(f"**Risk level:** {i.get('risk_level') or '—'}")
             if i.get("manager_summary"):
                 st.write(f"**Manager summary:** {i['manager_summary']}")
-            if i.get("proposed_command") and not i.get("command_output"):
+            if i.get("proposed_commands") and not i.get("command_output"):
                 st.caption("A diagnostic command is awaiting approval for this incident — see Approvals Center.")
             if st.button("Mark resolved", key=f"resolve_{i['id']}"):
                 i["status"] = "resolved"
@@ -738,7 +707,7 @@ elif st.session_state.page == "approvals":
             st.markdown(f"**{i['id']} — {i['title']}**")
             st.write(f"Risk level: **{i.get('risk_level') or '—'}**  |  Category: **{i.get('predicted_category') or '—'}**")
             if i.get("proposed_commands"):
-                st.code(i["proposed_commands"])
+                st.code(i["proposed_commands"][0])
             if i.get("manager_summary"):
                 st.caption(i["manager_summary"])
             c1, c2 = st.columns([1, 3])
