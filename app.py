@@ -622,7 +622,6 @@ if log_file is not None:
             uploaded_log_path = tmp.name
     except Exception as e:
         st.warning(f"Could not save uploaded log: {e}")
-
             ticket_fields = {
                 "ci_cat": ci_cat,
                 "ci_subcat": CI_SUBCAT_DEFAULTS.get(ci_cat, "Web Based Application"),
