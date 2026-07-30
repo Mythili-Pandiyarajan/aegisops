@@ -1,68 +1,132 @@
 """
-Log Analysis Agent — searches server.log / nginx.log / docker.log for
-lines relevant to the incident (by category keywords + severity markers),
-then asks the LLM to synthesize a suspected root cause from those lines.
+AegisOps - Log Analysis Agent
 
-This is the most differentiating agent in the pipeline -- most fresher
-agent projects never touch real log parsing. Uses realistic, messy sample
-logs (data/sample_logs/) rather than clean toy examples.
+Responsibilities
+----------------
+1. Search uploaded log (preferred)
+2. Fall back to demo logs (optional)
+3. Summarize only actual evidence
+4. Never hallucinate a root cause
 """
 
-import os
-from groq import Groq
+from langchain_core.messages import HumanMessage
 
-from graph.state import AegisOpsState
 from tools.log_parser import search_logs
-
-_client = None
-
-
-def _get_client():
-    global _client
-    if _client is None:
-        api_key = os.environ.get("GROQ_API_KEY")
-        if not api_key:
-            raise RuntimeError("GROQ_API_KEY not set.")
-        _client = Groq(api_key=api_key)
-    return _client
+from tools.llm import llm
 
 
-def _synthesize_root_cause(incident_text: str, log_lines: list) -> str:
-    if not log_lines:
-        return "No relevant log entries found for this incident."
+def run_log_analysis_agent(state):
+    """
+    State expects:
 
-    formatted = "\n".join(f"[{source}] {line}" for source, line in log_lines)
+    incident_text
+    predicted_category
+    uploaded_log_path (optional)
 
-    prompt = (
-        f"Incident: {incident_text}\n\n"
-        f"Relevant log lines (most severe/relevant first):\n{formatted}\n\n"
-        "Based ONLY on these log lines, state the most likely root cause in "
-        "1-2 sentences. Reference specific log evidence (e.g. error counts, "
-        "process names, timestamps) rather than speculating beyond what the "
-        "logs show."
+    Returns:
+        log_findings
+        suspected_root_cause
+    """
+
+    incident = state["incident_text"]
+
+    category = state.get("predicted_category")
+
+    uploaded_log = state.get("uploaded_log_path")
+
+    ######################################################
+    # Search logs
+    ######################################################
+
+    log_hits = search_logs(
+        incident_text=incident,
+        category=category,
+        uploaded_log_path=uploaded_log,
+        max_lines=10,
     )
 
-    client = _get_client()
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.1,
-        max_tokens=150,
+    ######################################################
+    # No evidence
+    ######################################################
+
+    if len(log_hits) == 0:
+
+        return {
+
+            "log_findings":
+                "No relevant log evidence found.",
+
+            "suspected_root_cause":
+                (
+                    "Insufficient log evidence to determine the root cause. "
+                    "Upload authentication, VPN, application, "
+                    "system or database logs."
+                )
+        }
+
+    ######################################################
+    # Build context
+    ######################################################
+
+    evidence = "\n".join(
+        f"[{src}] {line}"
+        for src, line in log_hits
     )
-    return response.choices[0].message.content.strip()
 
+    ######################################################
+    # Prompt
+    ######################################################
 
-def run_log_analysis_agent(state: AegisOpsState) -> dict:
-    log_lines = search_logs(
-        incident_text=state["incident_text"],
-        category=state.get("predicted_category"),
-        max_lines=8,
+    prompt = f"""
+You are a Senior Site Reliability Engineer.
+
+You MUST use ONLY the log evidence below.
+
+Never invent errors.
+
+Never mention files that are not shown.
+
+If evidence is insufficient, reply EXACTLY:
+
+Insufficient log evidence to determine root cause.
+
+Incident
+
+{incident}
+
+Category
+
+{category}
+
+Relevant Log Evidence
+
+{evidence}
+
+Return ONLY:
+
+1. Root Cause
+
+2. Supporting Evidence
+
+3. Recommended Next Diagnostic Step
+"""
+
+    ######################################################
+    # LLM
+    ######################################################
+
+    response = llm.invoke(
+
+        [HumanMessage(content=prompt)]
+
     )
 
-    log_findings = "\n".join(f"[{source}] {line}" for source, line in log_lines)
-    suspected_root_cause = _synthesize_root_cause(state["incident_text"], log_lines)
+    ######################################################
 
     return {
-        "log_findings": log_findings,
-        "suspected_root_cause": suspected_root_cause,
+
+        "log_findings": evidence,
+
+        "suspected_root_cause": response.content,
+
     }
