@@ -8,10 +8,12 @@ incident category and suspected root cause.
 print(">>> SHELL AGENT FILE LOADED <<<")
 print(__file__)
 
+
 from sandbox.allowlist import (
     build_command,
     CommandNotAllowedError,
 )
+
 
 ###############################################################
 # Category defaults
@@ -35,6 +37,7 @@ CATEGORY_COMMANDS = {
 
 }
 
+
 ###############################################################
 # Keyword mapping
 ###############################################################
@@ -53,14 +56,17 @@ KEYWORD_COMMANDS = {
     "compromise": ("failed_logins", None),
     "account": ("failed_logins", None),
 
+
     # Application
     "nginx": ("service_status", "nginx"),
     "apache": ("service_status", "apache2"),
+
 
     # Database
     "mysql": ("mysql_ping", None),
     "postgres": ("mysql_ping", None),
     "database": ("mysql_ping", None),
+
 
     # Hardware
     "disk": ("disk_usage", None),
@@ -70,13 +76,16 @@ KEYWORD_COMMANDS = {
     "oom": ("memory_usage", None),
     "cpu": ("cpu_usage", None),
 
+
     # Docker
     "docker": ("docker_ps", None),
     "container": ("docker_ps", None),
 
+
     # Mail
     "smtp": ("mail_queue", None),
     "mail": ("mail_queue", None),
+
 
     # Network
     "dns": ("ping", "8.8.8.8"),
@@ -84,6 +93,7 @@ KEYWORD_COMMANDS = {
     "timeout": ("ping", "8.8.8.8"),
 
 }
+
 
 ###############################################################
 # Choose Command
@@ -96,6 +106,7 @@ def choose_command(category, text):
     print("SEARCH TEXT:")
     print(text)
 
+
     for keyword, value in KEYWORD_COMMANDS.items():
 
         if keyword in text:
@@ -104,12 +115,15 @@ def choose_command(category, text):
 
             return value
 
+
     print("NO KEYWORD MATCH")
+
 
     return CATEGORY_COMMANDS.get(
         category,
         (None, None),
     )
+
 
 
 ###############################################################
@@ -120,31 +134,40 @@ def run_shell_agent(state):
 
     print(">>> run_shell_agent() CALLED <<<")
 
+
     print("\n==============================")
     print("SHELL AGENT STARTED")
     print("==============================")
+
 
     category = state.get(
         "predicted_category",
         "",
     )
 
+
     root = state.get(
         "suspected_root_cause",
         "",
     )
+
 
     incident = state.get(
         "incident_text",
         "",
     )
 
+
     combined_text = f"{root} {incident}"
+
 
     print("CATEGORY :", category)
     print("ROOT :", root)
     print("INCIDENT :", incident)
 
+
+    ###########################################################
+    # Select command
     ###########################################################
 
     command_name, target = choose_command(
@@ -152,14 +175,20 @@ def run_shell_agent(state):
         combined_text,
     )
 
+
     print("COMMAND :", command_name)
     print("TARGET :", target)
 
+
+
+    ###########################################################
+    # No command
     ###########################################################
 
     if command_name is None:
 
         print("NO COMMAND SELECTED")
+
 
         return {
 
@@ -178,6 +207,10 @@ def run_shell_agent(state):
 
         }
 
+
+
+    ###########################################################
+    # Build allowlisted command
     ###########################################################
 
     try:
@@ -187,11 +220,15 @@ def run_shell_agent(state):
             target,
         )
 
+
         print("COMMAND BUILT:", command)
+
 
     except CommandNotAllowedError as e:
 
+
         print("ALLOWLIST ERROR:", e)
+
 
         return {
 
@@ -209,23 +246,27 @@ def run_shell_agent(state):
 
         }
 
+
+
+    ###########################################################
+    # Successful command proposal
     ###########################################################
 
-      return {
+    return {
 
-    "command_name": command_name,
+        "command_name": command_name,
 
-    "target": target,
+        "target": target,
 
-    "proposed_command": command,
+        "proposed_command": command,
 
-    "proposed_commands": [
-        command
-    ],
+        "proposed_commands": [
+            command
+        ],
 
-    "approval_required": True,
+        "approval_required": True,
 
-    "command_status":
-        "Awaiting human approval before execution.",
+        "command_status":
+            "Awaiting human approval before execution.",
 
-}
+    }
