@@ -58,10 +58,10 @@ NODE_LABELS = {
     "category_classifier": "🏷️ Category Classifier",
     "merge_node": "🔀 Merge",
     "rag_agent": "📚 Knowledge / RAG Agent",
-    "log_analysis": "🔍 Log Analysis Agent",
+    "log_analysis_agent": "🔍 Log Analysis Agent",
     "shell_agent": "🖥️ Shell Agent",
     "ticket_generator": "🎫 Ticket Generator",
-    "manager_summary": "📋 Manager Summary",
+    "manager_summary_agent": "📋 Manager Summary",
 }
 NODE_ORDER = list(NODE_LABELS.keys())
 
@@ -345,7 +345,7 @@ def _format_node_output(node_name: str, output: dict) -> str:
         )
 
 
-    if node_name == "log_analysis":
+    if node_name == "log_analysis_agent":
 
         print("==============================")
         print("LOG ANALYSIS OUTPUT:")
@@ -447,7 +447,7 @@ def _format_node_output(node_name: str, output: dict) -> str:
     if node_name == "ticket_generator":
         payload = output.get("ticket_payload", {})
         return f"**Ticket:** `{payload.get('incident_id')}` | {payload.get('priority')} | {payload.get('category')} | {payload.get('status')}"
-    if node_name == "manager_summary":
+    if node_name == "manager_summary_agent":
         return f"**Risk level:** {output.get('risk_level')}\n\n{output.get('manager_summary')}"
     return str(output)
 
@@ -732,12 +732,21 @@ if st.session_state.page == "dashboard":
 # PAGE: File new incident
 # =========================================================================
 elif st.session_state.page == "intake":
+
     st.button("← Back to dashboard", on_click=goto, args=("dashboard",))
+
     st.markdown("## File operations incident ticket")
-    st.caption("Initiate multi-agent automated assessment, triage, and resolution protocols.")
+
+    st.caption(
+        "Initiate multi-agent automated assessment, triage, and resolution protocols."
+    )
 
     with st.container():
-        st.markdown('<div class="card">', unsafe_allow_html=True)
+
+        st.markdown(
+            '<div class="card">',
+            unsafe_allow_html=True
+        )
 
         title = st.text_input(
             "INCIDENT TITLE",
@@ -745,19 +754,33 @@ elif st.session_state.page == "intake":
         )
 
         col_a, col_b = st.columns([1.6, 1])
+
         with col_a:
-            severity_label = st.selectbox("INITIAL SEVERITY VECTOR", list(SEVERITY_OPTIONS.keys()), index=2)
+
+            severity_label = st.selectbox(
+                "INITIAL SEVERITY VECTOR",
+                list(SEVERITY_OPTIONS.keys()),
+                index=2,
+            )
+
             reported_severity = SEVERITY_OPTIONS[severity_label]
-            st.caption("＊ P1 (critical) severity automatically flags the incident for human manager approval before applying resolution plans.")
+
+            st.caption(
+                "＊ P1 (critical) severity automatically flags the incident for human manager approval before applying resolution plans."
+            )
+
         with col_b:
+
             st.markdown(
                 f"""
                 <div class="card" style="background:{BLUE_SOFT}; border-color:{BLUE};">
                     <b>🛡️ Pipeline automated protocol</b><br>
                     <span style="font-size:0.85rem; color:{MUTED};">
-                    Submission runs sequential intake parsing, priority/category
-                    prediction, knowledge-base retrieval, log analysis, and
-                    root-cause evaluation.
+                    Submission runs sequential intake parsing,
+                    priority/category prediction,
+                    knowledge-base retrieval,
+                    log analysis,
+                    and root-cause evaluation.
                     </span>
                 </div>
                 """,
@@ -770,227 +793,672 @@ elif st.session_state.page == "intake":
             height=140,
         )
 
-        log_file = st.file_uploader("LOG FILE UPLOAD (OPTIONAL)", type=["txt", "log"])
+        log_file = st.file_uploader(
+            "LOG FILE UPLOAD (OPTIONAL)",
+            type=["txt", "log"],
+        )
 
-        with st.expander("Additional ticket details (optional — improves prediction accuracy)"):
+        with st.expander(
+            "Additional ticket details (optional — improves prediction accuracy)"
+        ):
+
             ac1, ac2, ac3 = st.columns(3)
+
             with ac1:
-                ci_cat = st.selectbox("CI Category", CI_CAT_OPTIONS)
+                ci_cat = st.selectbox(
+                    "CI Category",
+                    CI_CAT_OPTIONS,
+                )
+
             with ac2:
-                category = st.selectbox("Ticket Category", CATEGORY_OPTIONS)
+                category = st.selectbox(
+                    "Ticket Category",
+                    CATEGORY_OPTIONS,
+                )
+
             with ac3:
-                open_hour = st.slider("Hour opened", 0, 23, datetime.now().hour)
+                open_hour = st.slider(
+                    "Hour opened",
+                    0,
+                    23,
+                    datetime.now().hour,
+                )
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(
+            "</div>",
+            unsafe_allow_html=True,
+        )
 
-    submitted = st.button("🚀  Analyze & file incident", type="primary")
+    submitted = st.button(
+        "🚀 Analyze & file incident",
+        type="primary",
+    )
 
     if submitted:
+
         if not title.strip() or not description.strip():
-            st.warning("Please provide at least an incident title and description before filing.")
+
+            st.warning(
+                "Please provide at least an incident title and description before filing."
+            )
+
         else:
+
             st.session_state.run_counter += 1
-            incident_id = f"INC-{datetime.now().strftime('%Y%m%d')}-{st.session_state.run_counter:03d}"
+
+            incident_id = (
+                f"INC-{datetime.now().strftime('%Y%m%d')}-"
+                f"{st.session_state.run_counter:03d}"
+            )
 
             incident_text = f"{title}\n\n{description}"
+
+            uploaded_log_path = None
+
             if log_file is not None:
+
                 try:
-                    log_text = log_file.read().decode("utf-8", errors="ignore")[:4000]
-                    incident_text += f"\n\n--- Uploaded log excerpt ---\n{log_text}"
+
+                    os.makedirs(
+                        "temp_logs",
+                        exist_ok=True,
+                    )
+
+                    uploaded_log_path = os.path.join(
+                        "temp_logs",
+                        log_file.name,
+                    )
+
+                    with open(
+                        uploaded_log_path,
+                        "wb",
+                    ) as f:
+
+                        f.write(
+                            log_file.getbuffer()
+                        )
+
+                    log_text = (
+                        log_file.getvalue()
+                        .decode(
+                            "utf-8",
+                            errors="ignore",
+                        )[:4000]
+                    )
+
+                    incident_text += (
+                        f"\n\n--- Uploaded log excerpt ---\n"
+                        f"{log_text}"
+                    )
+
                 except Exception:
-                    st.info("Could not read the uploaded log file as text — continuing without it.")
+
+                    uploaded_log_path = None
+
+                    st.info(
+                        "Could not read the uploaded log file as text — continuing without it."
+                    )
 
             ticket_fields = {
+
                 "ci_cat": ci_cat,
-                "ci_subcat": CI_SUBCAT_DEFAULTS.get(ci_cat, "Web Based Application"),
+
+                "ci_subcat": CI_SUBCAT_DEFAULTS.get(
+                    ci_cat,
+                    "Web Based Application",
+                ),
+
                 "category": category,
+
                 "open_hour": open_hour,
             }
 
             record = {
+
                 "id": incident_id,
+
                 "title": title.strip(),
+
                 "reported_severity": reported_severity,
+
                 "created_at": datetime.now().strftime("%H:%M:%S"),
+
                 "incident_text": incident_text,
+
                 "ticket_fields": ticket_fields,
+
+                "uploaded_log_path": uploaded_log_path,
             }
 
             st.divider()
-            st.markdown(f"##### Running pipeline for `{incident_id}`")
+
+            st.markdown(
+                f"##### Running pipeline for `{incident_id}`"
+            )
+
             try:
-                state = run_pipeline(incident_text, incident_id, ticket_fields, human_approved=False)
-                record_run(record, state, success=True)
-                st.session_state.incidents.append(record)
+
+                state = run_pipeline(
+                    incident_text=incident_text,
+                    incident_id=incident_id,
+                    ticket_fields=ticket_fields,
+                    human_approved=False,
+                    uploaded_log_path=uploaded_log_path,
+                )
+
+                record_run(
+                    record,
+                    state,
+                    success=True,
+                )
+
+                st.session_state.incidents.append(
+                    record
+                )
+
                 save_persisted()
-                st.success(f"Incident `{incident_id}` filed — status: **{record['status'].replace('_',' ')}**")
-                st.button("View on dashboard →", on_click=goto, args=("dashboard",))
-            
+
+                st.success(
+                    f"Incident `{incident_id}` filed — status: **{record['status'].replace('_',' ')}**"
+                )
+
+                st.button(
+                    "View on dashboard →",
+                    on_click=goto,
+                    args=("dashboard",),
+                )
 
             except Exception:
-                record_run(record, {}, success=False)
-                st.session_state.incidents.append(
-                {**record, "status": "active", "predicted_priority": None}
+
+                record_run(
+                    record,
+                    {},
+                    success=False,
                 )
+
+                st.session_state.incidents.append(
+                    {
+                        **record,
+                        "status": "active",
+                        "predicted_priority": None,
+                    }
+                )
+
                 save_persisted()
 
-                st.code(traceback.format_exc())
-
+                st.code(
+                    traceback.format_exc()
+                )
 # =========================================================================
 # PAGE: Active Incidents
 # =========================================================================
 elif st.session_state.page == "active":
-    st.markdown("## Active Incidents")
-    st.caption("Incidents currently open and needing investigation or response")
 
-    active_inc = [i for i in st.session_state.incidents if i["status"] == "active"]
+    st.markdown("## Active Incidents")
+
+    st.caption(
+        "Incidents currently open and needing investigation or response"
+    )
+
+    active_inc = [
+        i
+        for i in st.session_state.incidents
+        if i["status"] == "active"
+    ]
+
     base_active = st.session_state.baseline["active"]
 
     if base_active:
-        st.info(f"{base_active} baseline active incident(s) from before this session — no live detail recorded yet.")
+
+        st.info(
+            f"{base_active} baseline active incident(s) from before this session — "
+            "no live detail recorded yet."
+        )
 
     if not active_inc:
+
         st.markdown(
-            '<div class="card empty-state">No live active incidents in this session.</div>',
+            '<div class="card empty-state">'
+            'No live active incidents in this session.'
+            '</div>',
             unsafe_allow_html=True,
         )
-    for i in active_inc:
-        with st.expander(f"{i['id']} — {i['title']}"):
-            color, _ = PRIORITY_COLORS.get(i.get("predicted_priority"), (MUTED, BG))
-            st.markdown(f"**Predicted priority:** <span style='color:{color}'>{i.get('predicted_priority') or '—'}</span>", unsafe_allow_html=True)
-            st.write(f"**Category:** {i.get('predicted_category') or '—'}")
-            st.write(f"**Risk level:** {i.get('risk_level') or '—'}")
-            if i.get("manager_summary"):
-                st.write(f"**Manager summary:** {i['manager_summary']}")
-            if i.get("proposed_commands") and not i.get("command_output"):
-                st.caption("A diagnostic command is awaiting approval for this incident — see Approvals Center.")
-            if st.button("Mark resolved", key=f"resolve_{i['id']}"):
-                i["status"] = "resolved"
-                save_persisted()
-                st.rerun()
 
+    else:
+
+        for i in active_inc:
+
+            with st.expander(
+                f"{i['id']} — {i['title']}"
+            ):
+
+                color, _ = PRIORITY_COLORS.get(
+                    i.get("predicted_priority"),
+                    (MUTED, BG),
+                )
+
+                st.markdown(
+                    f"**Predicted priority:** "
+                    f"<span style='color:{color}'>"
+                    f"{i.get('predicted_priority') or '—'}"
+                    f"</span>",
+                    unsafe_allow_html=True,
+                )
+
+                st.write(
+                    f"**Category:** "
+                    f"{i.get('predicted_category') or '—'}"
+                )
+
+                st.write(
+                    f"**Risk level:** "
+                    f"{i.get('risk_level') or '—'}"
+                )
+
+                if i.get("manager_summary"):
+
+                    st.write(
+                        f"**Manager summary:**\n\n"
+                        f"{i['manager_summary']}"
+                    )
+
+                if (
+                    i.get("proposed_commands")
+                    and not i.get("command_output")
+                ):
+
+                    st.caption(
+                        "A diagnostic command is awaiting approval for this incident. "
+                        "See the Approvals Center."
+                    )
+
+                if st.button(
+                    "Mark resolved",
+                    key=f"resolve_{i['id']}",
+                ):
+
+                    i["status"] = "resolved"
+
+                    i["needs_human_review"] = False
+
+                    save_persisted()
+
+                    st.rerun()
 # =========================================================================
 # PAGE: Approvals Center
 # =========================================================================
 elif st.session_state.page == "approvals":
-    st.markdown("## Approvals Center")
-    st.caption("Incidents awaiting manual manager sign-off before resolution plans are applied")
 
-    pending_inc = [i for i in st.session_state.incidents if i["status"] == "pending_approval"]
+    st.markdown("## Approvals Center")
+
+    st.caption(
+        "Incidents awaiting manual manager sign-off before resolution plans are applied"
+    )
+
+    pending_inc = [
+        i
+        for i in st.session_state.incidents
+        if i["status"] == "pending_approval"
+    ]
+
     base_pending = st.session_state.baseline["pending"]
 
     if base_pending:
-        st.info(f"{base_pending} baseline pending approval(s) from before this session — no live detail recorded yet.")
+
+        st.info(
+            f"{base_pending} baseline pending approval(s) from before this session — "
+            "no live detail recorded yet."
+        )
 
     if not pending_inc:
+
         st.markdown(
-            '<div class="card empty-state">Nothing awaiting approval right now.</div>',
+            '<div class="card empty-state">'
+            'Nothing awaiting approval right now.'
+            '</div>',
             unsafe_allow_html=True,
         )
-    for i in pending_inc:
-        with st.container():
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.markdown(f"**{i['id']} — {i['title']}**")
-            st.write(f"Risk level: **{i.get('risk_level') or '—'}**  |  Category: **{i.get('predicted_category') or '—'}**")
-            if i.get("proposed_commands"):
-                st.code(i["proposed_commands"][0])
-            if i.get("manager_summary"):
-                st.caption(i["manager_summary"])
-            c1, c2 = st.columns([1, 3])
-            with c1:
-                if st.button("✅ Approve & execute", key=f"approve_{i['id']}"):
-                    incident_text = i.get("incident_text", i["title"])
-                    ticket_fields = i.get(
-                        "ticket_fields",
-                        {"ci_cat": "application", "ci_subcat": "Web Based Application", "category": "incident", "open_hour": datetime.now().hour},
+
+    else:
+
+        for i in pending_inc:
+
+            with st.container():
+
+                st.markdown(
+                    '<div class="card">',
+                    unsafe_allow_html=True,
+                )
+
+                st.markdown(
+                    f"**{i['id']} — {i['title']}**"
+                )
+
+                st.write(
+                    f"Risk level: **{i.get('risk_level') or '—'}**"
+                    f" | Category: **{i.get('predicted_category') or '—'}**"
+                )
+
+                if i.get("proposed_commands"):
+
+                    st.code(i["proposed_commands"][0])
+
+                if i.get("manager_summary"):
+
+                    st.caption(
+                        i["manager_summary"]
                     )
-                    st.divider()
-                    st.markdown(f"##### Re-running pipeline for `{i['id']}` with approval")
-                    try:
-                        new_state = run_pipeline(incident_text, i["id"], ticket_fields, human_approved=True)
-                        i.update(
-                            {
-                                "risk_level": new_state.get("risk_level", i.get("risk_level")),
-                                "manager_summary": new_state.get("manager_summary", i.get("manager_summary")),
-                                "command_output": new_state.get("command_output"),
-                                "needs_human_review": False,
-                                "status": derive_status(new_state),
-                            }
+
+                c1, c2 = st.columns([1, 3])
+
+                with c1:
+
+                    if st.button(
+                        "✅ Approve & Execute",
+                        key=f"approve_{i['id']}",
+                    ):
+
+                        incident_text = i.get(
+                            "incident_text",
+                            i["title"],
                         )
-                        save_persisted()
-                        st.success(f"Approved and re-run — new status: **{i['status'].replace('_',' ')}**")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Re-run failed: {e}")
-            st.markdown("</div>", unsafe_allow_html=True)
+
+                        ticket_fields = i.get(
+                            "ticket_fields",
+                            {
+                                "ci_cat": "application",
+                                "ci_subcat": "Web Based Application",
+                                "category": "incident",
+                                "open_hour": datetime.now().hour,
+                            },
+                        )
+
+                        uploaded_log_path = i.get(
+                            "uploaded_log_path"
+                        )
+
+                        st.divider()
+
+                        st.markdown(
+                            f"##### Re-running pipeline for `{i['id']}` with approval"
+                        )
+
+                        try:
+
+                            new_state = run_pipeline(
+                                incident_text=incident_text,
+                                incident_id=i["id"],
+                                ticket_fields=ticket_fields,
+                                human_approved=True,
+                                uploaded_log_path=uploaded_log_path,
+                            )
+
+                            i.update(
+                                {
+                                    "risk_level": new_state.get(
+                                        "risk_level",
+                                        i.get("risk_level"),
+                                    ),
+                                    "manager_summary": new_state.get(
+                                        "manager_summary",
+                                        i.get("manager_summary"),
+                                    ),
+                                    "command_output": new_state.get(
+                                        "command_output"
+                                    ),
+                                    "proposed_commands": new_state.get(
+                                        "proposed_commands"
+                                    ),
+                                    "needs_human_review": False,
+                                    "status": derive_status(
+                                        new_state
+                                    ),
+                                }
+                            )
+
+                            save_persisted()
+
+                            st.success(
+                                f"Approved and re-run — new status: "
+                                f"**{i['status'].replace('_',' ')}**"
+                            )
+
+                            st.rerun()
+
+                        except Exception as e:
+
+                            st.error(
+                                f"Re-run failed: {e}"
+                            )
+
+                st.markdown(
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
 
 # =========================================================================
 # PAGE: Audit Center
 # =========================================================================
 elif st.session_state.page == "audit":
+
     st.markdown("## Audit Center")
-    st.caption("Full record of incidents analyzed in this session")
+
+    st.caption(
+        "Full record of incidents analyzed in this session"
+    )
 
     if not st.session_state.incidents:
-        st.markdown('<div class="card empty-state">No incidents recorded yet this session.</div>', unsafe_allow_html=True)
-    else:
-        for i in reversed(st.session_state.incidents):
-            st.markdown(
-                f"""
-                <div class="card" style="margin-bottom:10px;">
-                    <b>{i['id']}</b> — {i['title']}<br>
-                    <span style="font-size:0.82rem; color:{MUTED};">
-                    Reported severity: {i.get('reported_severity','—')} · Predicted: {i.get('predicted_priority','—')} ·
-                    Category: {i.get('predicted_category','—')} · Status: {i['status'].replace('_',' ')} · Filed at {i['created_at']}
-                    </span>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
 
+        st.markdown(
+            '<div class="card empty-state">'
+            'No incidents recorded yet this session.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+    else:
+
+        for i in reversed(st.session_state.incidents):
+
+            with st.expander(
+                f"{i['id']} — {i['title']}"
+            ):
+
+                st.write(
+                    f"**Reported Severity:** {i.get('reported_severity','—')}"
+                )
+
+                st.write(
+                    f"**Predicted Priority:** {i.get('predicted_priority','—')}"
+                )
+
+                st.write(
+                    f"**Category:** {i.get('predicted_category','—')}"
+                )
+
+                st.write(
+                    f"**Status:** {i['status'].replace('_',' ')}"
+                )
+
+                st.write(
+                    f"**Created At:** {i.get('created_at','—')}"
+                )
+
+                st.write(
+                    f"**Risk Level:** {i.get('risk_level','—')}"
+                )
+
+                if i.get("manager_summary"):
+
+                    st.write("### Manager Summary")
+
+                    st.write(
+                        i["manager_summary"]
+                    )
+
+                if i.get("proposed_commands"):
+
+                    st.write("### Proposed Command")
+
+                    st.code(
+                        i["proposed_commands"][0],
+                        language="bash",
+                    )
+
+                if i.get("command_output"):
+
+                    st.write("### Command Output")
+
+                    st.code(
+                        i["command_output"],
+                        language="text",
+                    )
+
+                if i.get("uploaded_log_path"):
+
+                    st.caption(
+                        f"Uploaded Log: {i['uploaded_log_path']}"
+                    )
+
+                st.divider()
 # =========================================================================
 # PAGE: SOC Analytics
 # =========================================================================
 elif st.session_state.page == "analytics":
+
     st.markdown("## SOC Analytics")
-    st.caption("Aggregate stats across incidents analyzed in this session")
+
+    st.caption(
+        "Aggregate statistics across incidents analyzed in this session"
+    )
 
     inc = st.session_state.incidents
+
     if not inc:
-        st.markdown('<div class="card empty-state">No data yet — file an incident to populate analytics.</div>', unsafe_allow_html=True)
+
+        st.markdown(
+            '<div class="card empty-state">'
+            'No data yet — file an incident to populate analytics.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
     else:
+
         cats = {}
-        confidences = []
+        confidences = {}
+        risks = {}
+
+        confidence_values = []
+
+        approval_count = 0
+
         for i in inc:
-            c = i.get("predicted_category") or "Unknown"
-            cats[c] = cats.get(c, 0) + 1
-            if i.get("priority_confidence"):
-                confidences.append(i["priority_confidence"])
+
+            category = i.get("predicted_category") or "Unknown"
+            cats[category] = cats.get(category, 0) + 1
+
+            risk = i.get("risk_level") or "Unknown"
+            risks[risk] = risks.get(risk, 0) + 1
+
+            conf = i.get("priority_confidence")
+
+            if conf is not None:
+
+                confidence_values.append(conf)
+
+            if i.get("needs_human_review"):
+
+                approval_count += 1
 
         c1, c2 = st.columns(2)
+
+        # ---------------------------------------------------------
+        # Category Distribution
+        # ---------------------------------------------------------
         with c1:
-            st.markdown("#### Incidents by category")
+
+            st.markdown("#### Incidents by Category")
+
             rows_html = ""
+
             max_v = max(cats.values()) if cats else 1
-            for cat, v in sorted(cats.items(), key=lambda x: -x[1]):
-                pct = round(100 * v / max_v)
+
+            for category, value in sorted(
+                cats.items(),
+                key=lambda x: -x[1],
+            ):
+
+                pct = round(
+                    100 * value / max_v
+                )
+
                 rows_html += f"""
                 <div class="sev-row">
-                    <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-                        <span>{cat}</span><span class="mono">{v}</span>
+                    <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
+                        <span>{category}</span>
+                        <span class="mono">{value}</span>
                     </div>
-                    <div class="sev-track"><div class="sev-fill" style="width:{pct}%; background:{BLUE};"></div></div>
+
+                    <div class="sev-track">
+                        <div class="sev-fill"
+                             style="width:{pct}%;background:{BLUE};">
+                        </div>
+                    </div>
                 </div>
                 """
-            st.markdown(f'<div class="card">{rows_html}</div>', unsafe_allow_html=True)
+
+            st.markdown(
+                f'<div class="card">{rows_html}</div>',
+                unsafe_allow_html=True,
+            )
+
+        # ---------------------------------------------------------
+        # SOC Summary Metrics
+        # ---------------------------------------------------------
         with c2:
-            avg_conf = round(100 * sum(confidences) / len(confidences)) if confidences else 0
+
+            avg_conf = (
+                round(
+                    100
+                    * sum(confidence_values)
+                    / len(confidence_values)
+                )
+                if confidence_values
+                else 0
+            )
+
             st.markdown(
                 f"""
                 <div class="card">
-                    <div class="kpi-label">AVG. PRIORITY CONFIDENCE</div>
-                    <div class="kpi-value" style="color:{BLUE}">{avg_conf}%</div>
-                    <div class="kpi-sub">Across {len(inc)} session incident(s)</div>
+
+                    <div class="kpi-label">
+                        AVG. PRIORITY CONFIDENCE
+                    </div>
+
+                    <div class="kpi-value"
+                         style="color:{BLUE};">
+                        {avg_conf}%
+                    </div>
+
+                    <div class="kpi-sub">
+                        Across {len(inc)} incident(s)
+                    </div>
+
+                    <hr>
+
+                    <b>Human Approvals Required</b><br>
+                    {approval_count}
+
+                    <br><br>
+
+                    <b>Risk Distribution</b><br>
+
+                    {"<br>".join(
+                        f"{k}: {v}"
+                        for k, v in risks.items()
+                    )}
+
                 </div>
                 """,
                 unsafe_allow_html=True,
