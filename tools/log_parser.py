@@ -275,38 +275,32 @@ def search_logs(
 
     )
 
-
-
     ##########################################################
     # Select files
     ##########################################################
 
+    files = []
+
+    # Search uploaded log first (if provided)
     if uploaded_log_path:
 
-        files = [
-            Path(uploaded_log_path)
-        ]
+        uploaded_path = Path(uploaded_log_path)
 
-    else:
+        if uploaded_path.exists():
+            files.append(uploaded_path)
 
-        files = []
+    # Then search built-in sample logs
+    priority_logs = CATEGORY_LOG_PRIORITY.get(
+        category,
+        DEFAULT_LOGS
+    )
 
+    for log in priority_logs:
 
-        # category priority first
+        log_path = LOG_DIR / log
 
-        priority_logs = CATEGORY_LOG_PRIORITY.get(
-            category,
-            DEFAULT_LOGS
-        )
-
-
-        for log in priority_logs:
-
-            files.append(
-                LOG_DIR / log
-            )
-
-
+        if log_path.exists() and log_path not in files:
+            files.append(log_path)
 
     ##########################################################
     # Collect candidates
