@@ -134,36 +134,54 @@ def run_shell_agent(state):
 
     print(">>> run_shell_agent() CALLED <<<")
 
-
     print("\n==============================")
     print("SHELL AGENT STARTED")
     print("==============================")
-
 
     category = state.get(
         "predicted_category",
         "",
     )
 
-
     root = state.get(
         "suspected_root_cause",
         "",
     )
-
 
     incident = state.get(
         "incident_text",
         "",
     )
 
+    uploaded_log_path = state.get(
+        "uploaded_log_path"
+    )
 
-    combined_text = f"{root} {incident}"
+    log_text = ""
 
+    if uploaded_log_path:
+        try:
+            with open(
+                uploaded_log_path,
+                "r",
+                encoding="utf-8",
+                errors="ignore",
+            ) as f:
+                log_text = f.read()
+
+        except Exception as e:
+            print("Could not read uploaded log:", e)
+
+    combined_text = (
+        f"{root}\n"
+        f"{incident}\n"
+        f"{log_text}"
+    )
 
     print("CATEGORY :", category)
     print("ROOT :", root)
     print("INCIDENT :", incident)
+    print("UPLOADED LOG PATH :", uploaded_log_path)
 
 
     ###########################################################
