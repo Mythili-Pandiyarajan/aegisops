@@ -302,6 +302,8 @@ def _format_node_output(node_name: str, output: dict) -> str:
         docs = ", ".join(output.get("retrieved_docs", [])) or "none"
         return f"**Retrieved:** {docs}\n\n**Summary:** {output.get('rag_summary')}"
     if node_name == "log_analysis":
+        print("LOG_ANALYSIS OUTPUT:", output)
+
         root_cause = output.get(
             "suspected_root_cause",
             "No root cause generated"
