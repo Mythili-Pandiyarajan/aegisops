@@ -18,6 +18,7 @@ Run with:
 import json
 import os
 import traceback
+from graph.runner import run_pipeline
 from datetime import datetime
 
 import streamlit as st
