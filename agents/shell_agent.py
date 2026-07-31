@@ -6,6 +6,7 @@ incident category and suspected root cause.
 """
 
 print(">>> SHELL AGENT FILE LOADED <<<")
+print(__file__)
 
 from sandbox.allowlist import (
     build_command,
