@@ -91,7 +91,11 @@ class AegisOpsState(TypedDict, total=False):
 
     target: Optional[str]
 
+    # Single command (backward compatibility)
     proposed_command: Optional[str]
+
+    # Multiple commands support (UI + future expansion)
+    proposed_commands: Optional[List[str]]
 
     approval_required: Optional[bool]
 
