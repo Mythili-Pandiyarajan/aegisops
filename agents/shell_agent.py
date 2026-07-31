@@ -211,21 +211,21 @@ def run_shell_agent(state):
 
     ###########################################################
 
-    return {
+      return {
 
-        "command_name": command_name,
+    "command_name": command_name,
 
-        "target": target,
+    "target": target,
 
-        "proposed_command": command,
+    "proposed_command": command,
 
-        "proposed_commands": [
-            command
-        ],
+    "proposed_commands": [
+        command
+    ],
 
-        "approval_required": True,
+    "approval_required": True,
 
-        "command_status":
-            "Awaiting human approval before execution.",
+    "command_status":
+        "Awaiting human approval before execution.",
 
-    }
+}
