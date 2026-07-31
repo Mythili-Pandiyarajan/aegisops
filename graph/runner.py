@@ -9,7 +9,7 @@ from graph.state import AegisOpsState
 
 
 print("NEW RUNNER LOADED:", __file__)
-
+print("AegisOps runner updated - uploaded_log_path support enabled")
 
 pipeline = build_graph()
 
