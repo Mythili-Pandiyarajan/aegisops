@@ -301,41 +301,47 @@ def goto(page: str):
 def _format_node_output(node_name: str, output: dict) -> str:
     if node_name == "priority_predictor":
         return f"**Priority:** {output.get('predicted_priority')}  \n**Confidence:** {output.get('priority_confidence'):.2f}"
-    if node_name == "category_classifier":
+        if node_name == "category_classifier":
         return f"**Category:** {output.get('predicted_category')}  \n**Confidence:** {output.get('category_confidence'):.2f}"
+
+
     if node_name == "merge_node":
         review = output.get("needs_human_review")
         return f"**Needs human review:** {'Yes ⚠️' if review else 'No'}"
+
+
     if node_name == "rag_agent":
         docs = ", ".join(output.get("retrieved_docs", [])) or "none"
         return f"**Retrieved:** {docs}\n\n**Summary:** {output.get('rag_summary')}"
+
+
     if node_name == "log_analysis":
 
-    print("==============================")
-    print("LOG ANALYSIS OUTPUT:")
-    print(output)
-    print("==============================")
+        print("==============================")
+        print("LOG ANALYSIS OUTPUT:")
+        print(output)
+        print("==============================")
 
 
-    root = output.get(
-        "suspected_root_cause",
-        "No root cause generated"
-    )
+        root = output.get(
+            "suspected_root_cause",
+            "No root cause generated"
+        )
 
 
-    analysis = output.get(
-        "llm_response",
-        "No analysis generated"
-    )
+        analysis = output.get(
+            "llm_response",
+            "No analysis generated"
+        )
 
 
-    evidence = output.get(
-        "log_findings",
-        "No evidence found"
-    )
+        evidence = output.get(
+            "log_findings",
+            "No evidence found"
+        )
 
 
-    return f"""
+        return f"""
 ### Root Cause
 
 {root}
@@ -350,6 +356,8 @@ def _format_node_output(node_name: str, output: dict) -> str:
 
 {evidence}
 """
+
+
     if node_name == "shell_agent":
 
         print("===================================")
