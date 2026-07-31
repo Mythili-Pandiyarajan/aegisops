@@ -28,18 +28,12 @@ def run_pipeline(
     uploaded_log_path: str | None = None,
 ):
 
-
     print("\n==============================")
     print("AEGISOPS PIPELINE STARTED")
     print("==============================")
 
 
-    initial_state: AegisOpsState = {
-
-
-        # ---------------------
-        # Input
-        # ---------------------
+    initial_state = {
 
         "incident_id": incident_id,
 
@@ -49,17 +43,7 @@ def run_pipeline(
 
         "uploaded_log_path": uploaded_log_path,
 
-
-        # ---------------------
-        # Approval
-        # ---------------------
-
         "human_approved": human_approved,
-
-
-        # ---------------------
-        # Defaults
-        # ---------------------
 
         "needs_human_review": False,
 
@@ -70,30 +54,16 @@ def run_pipeline(
     }
 
 
-
     try:
-
 
         final_state = pipeline.invoke(
             initial_state
         )
 
-
-        print("\n==============================")
-        print("PIPELINE COMPLETED")
-        print("==============================")
-
-
         return final_state
 
 
-
     except Exception as e:
-
-
-        print("\nPIPELINE FAILED")
-        print(e)
-
 
         return {
 
