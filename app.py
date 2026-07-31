@@ -18,12 +18,13 @@ Run with:
 import json
 import os
 import traceback
-from graph.runner import run_pipeline
 from datetime import datetime
 
 import streamlit as st
 
 from graph.build_graph import build_graph
+
+from graph.runner import run_pipeline
 
 # Debug: verify which shell_agent.py is being imported
 import agents.shell_agent as sa
