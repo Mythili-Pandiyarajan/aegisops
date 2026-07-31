@@ -108,7 +108,11 @@ def run_shell_agent(state):
 
     category = state.get("predicted_category", "")
 
-    root = state.get("suspected_root_cause", "")
+    root = (
+    state.get("suspected_root_cause", "")
+    + " "
+    + state.get("incident_text", "")
+)
 
     print("CATEGORY:", category)
     print("ROOT:", root)
