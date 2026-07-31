@@ -2,22 +2,14 @@
 AegisOps Pipeline Runner
 """
 
-print("===================================")
-print("AegisOps runner updated - uploaded_log_path support enabled")
-print("Loaded runner from:", __file__)
-print("===================================")
-
-import traceback
-
 from graph.build_graph import build_graph
 from graph.state import AegisOpsState
 
 
-print("NEW RUNNER LOADED:", __file__)
 print("AegisOps runner updated - uploaded_log_path support enabled")
 
-pipeline = build_graph()
 
+pipeline = build_graph()
 
 
 def run_pipeline(
@@ -28,7 +20,9 @@ def run_pipeline(
     uploaded_log_path: str | None = None,
 ):
 
-    print("PIPELINE RUN STARTED")
+    print("RUNNER RECEIVED uploaded_log_path:")
+    print(uploaded_log_path)
+
 
     initial_state: AegisOpsState = {
 
@@ -53,21 +47,18 @@ def run_pipeline(
 
     try:
 
-        result = pipeline.invoke(
+        final_state = pipeline.invoke(
             initial_state
         )
 
-        return result
+        return final_state
 
 
     except Exception as e:
 
-        traceback.print_exc()
+        print("PIPELINE ERROR:", e)
 
         return {
-
             **initial_state,
-
             "error_message": str(e)
-
         }
