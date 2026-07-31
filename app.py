@@ -299,9 +299,12 @@ def goto(page: str):
 # Pipeline execution
 # =========================================================================
 def _format_node_output(node_name: str, output: dict) -> str:
+
     if node_name == "priority_predictor":
         return f"**Priority:** {output.get('predicted_priority')}  \n**Confidence:** {output.get('priority_confidence'):.2f}"
-        if node_name == "category_classifier":
+
+
+    if node_name == "category_classifier":
         return f"**Category:** {output.get('predicted_category')}  \n**Confidence:** {output.get('category_confidence'):.2f}"
 
 
@@ -373,7 +376,7 @@ def _format_node_output(node_name: str, output: dict) -> str:
             if command_output and str(command_output).startswith("blocked:"):
                 return f"⚠️ **Command blocked by safety validation:**\n\n{command_output}"
 
-            return f"""
+            return "No diagnostic command proposed."
 **No diagnostic command proposed.**
 
 ### Debug Output
