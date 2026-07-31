@@ -341,20 +341,20 @@ def _format_node_output(node_name: str, output: dict) -> str:
 """    
     if node_name == "shell_agent":
 
-    print("===================================")
-    print("SHELL_AGENT OUTPUT:")
-    print(output)
-    print("===================================")
+        print("===================================")
+        print("SHELL_AGENT OUTPUT:")
+        print(output)
+        print("===================================")
 
-    cmds = output.get("proposed_commands", [])
-    command_output = output.get("command_output")
+        cmds = output.get("proposed_commands", [])
+        command_output = output.get("command_output")
 
-    if not cmds:
+        if not cmds:
 
-        if command_output and str(command_output).startswith("blocked:"):
-            return f"⚠️ **Command blocked by safety validation:**\n\n{command_output}"
+            if command_output and str(command_output).startswith("blocked:"):
+                return f"⚠️ **Command blocked by safety validation:**\n\n{command_output}"
 
-        return f"""
+            return f"""
 **No diagnostic command proposed.**
 
 ### Debug Output
@@ -362,21 +362,21 @@ def _format_node_output(node_name: str, output: dict) -> str:
 {output}
 """
 
-    text = f"**Proposed command:** `{cmds[0]}`"
+        text = f"**Proposed command:** `{cmds[0]}`"
 
-    if command_output:
-        text += f"\n\n**Output:**\n```\n{command_output}\n```"
-    else:
-        text += "\n\n_Awaiting human approval before execution._"
+        if command_output:
+            text += f"\n\n**Output:**\n```\n{command_output}\n```"
+        else:
+            text += "\n\n_Awaiting human approval before execution._"
 
-    text += f"""
+        text += f"""
 
 ### Debug Output
 
 {output}
 """
 
-    return text
+        return text
     if node_name == "ticket_generator":
         payload = output.get("ticket_payload", {})
         return f"**Ticket:** `{payload.get('incident_id')}` | {payload.get('priority')} | {payload.get('category')} | {payload.get('status')}"
