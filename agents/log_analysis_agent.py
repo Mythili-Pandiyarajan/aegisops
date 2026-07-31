@@ -7,7 +7,10 @@ from tools.llm import llm
 
 
 def run_log_analysis_agent(state):
-
+    
+    print("=" * 60)
+    print("LOG ANALYSIS AGENT STARTED")
+    
     incident = state["incident_text"]
     category = state.get("predicted_category")
     uploaded_log = state.get("uploaded_log_path")
