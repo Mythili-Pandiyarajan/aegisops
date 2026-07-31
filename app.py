@@ -24,7 +24,15 @@ from datetime import datetime
 import streamlit as st
 
 from graph.runner import run_pipeline
+import graph.runner as runner
 
+print("==============================")
+print("RUNNER LOADED FROM:")
+print(runner.__file__)
+print("==============================")
+
+import inspect
+print(inspect.signature(runner.run_pipeline))
 
 # ==========================================================
 # DEBUG: VERIFY IMPORTED FILES
