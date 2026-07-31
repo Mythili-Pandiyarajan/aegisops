@@ -664,11 +664,16 @@ elif st.session_state.page == "intake":
                 save_persisted()
                 st.success(f"Incident `{incident_id}` filed — status: **{record['status'].replace('_',' ')}**")
                 st.button("View on dashboard →", on_click=goto, args=("dashboard",))
-            except Exception as e:
+            
+
+            except Exception:
                 record_run(record, {}, success=False)
-                st.session_state.incidents.append({**record, "status": "active", "predicted_priority": None})
+                st.session_state.incidents.append(
+                {**record, "status": "active", "predicted_priority": None}
+                )
                 save_persisted()
-                st.error(f"Pipeline run failed: {e}")
+
+                st.code(traceback.format_exc())
 
 # =========================================================================
 # PAGE: Active Incidents
