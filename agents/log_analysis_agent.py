@@ -12,9 +12,9 @@ def run_log_analysis_agent(state):
     category = state.get("predicted_category")
     uploaded_log = state.get("uploaded_log_path")
 
-    # --------------------------------------------------
-    # Search logs
-    # --------------------------------------------------
+    ##########################################################
+    # Search Logs
+    ##########################################################
 
     log_hits = search_logs(
         incident_text=incident,
@@ -23,69 +23,95 @@ def run_log_analysis_agent(state):
         max_lines=10,
     )
 
-    # --------------------------------------------------
-    # No evidence
-    # --------------------------------------------------
+    ##########################################################
+    # No Evidence
+    ##########################################################
 
     if not log_hits:
+
         return {
-            "suspected_root_cause": "",
+
+            "log_findings": "No relevant log evidence found.",
+
+            "suspected_root_cause":
+                "Insufficient log evidence to determine the root cause.",
+
             "llm_response": "",
-            "log_findings": "No relevant log evidence found."
+
         }
 
-    # --------------------------------------------------
-    # Build evidence
-    # --------------------------------------------------
+    ##########################################################
+    # Build Evidence
+    ##########################################################
 
     evidence = "\n".join(
         f"[{src}] {line}"
         for src, line in log_hits
     )
 
+    ##########################################################
+    # Prompt
+    ##########################################################
+
     prompt = f"""
 You are a Senior Site Reliability Engineer.
 
-Use ONLY the evidence.
+Use ONLY the supplied evidence.
 
-Incident:
+Incident
+--------
 {incident}
 
-Category:
+Category
+--------
 {category}
 
-Evidence:
+Evidence
+--------
 {evidence}
 
-Return EXACTLY:
+Return EXACTLY in this format.
 
 ROOT_CAUSE:
-(one sentence)
+(one short sentence)
 
 ANALYSIS:
-(short explanation)
+(2-3 sentences)
 
 NEXT_STEP:
 (one recommendation)
 """
 
+    ##########################################################
+    # Invoke LLM
+    ##########################################################
+
     response = llm.invoke(prompt)
 
-    response = str(response).strip()
+    if not isinstance(response, str):
+        response = str(response)
 
-    root_cause = ""
+    ##########################################################
+    # Extract Root Cause
+    ##########################################################
+
+    root_cause = response
 
     if "ROOT_CAUSE:" in response:
+
         try:
+
             root_cause = (
                 response.split("ROOT_CAUSE:")[1]
                 .split("ANALYSIS:")[0]
                 .strip()
             )
+
         except Exception:
-            root_cause = response
-    else:
-        root_cause = response
+
+            root_cause = response.strip()
+
+    ##########################################################
 
     return {
 
