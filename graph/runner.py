@@ -2,6 +2,11 @@
 AegisOps Pipeline Runner
 """
 
+print("===================================")
+print("AegisOps runner updated - uploaded_log_path support enabled")
+print("Loaded runner from:", __file__)
+print("===================================")
+
 import traceback
 
 from graph.build_graph import build_graph
