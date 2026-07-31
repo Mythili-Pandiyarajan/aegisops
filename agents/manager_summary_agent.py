@@ -15,7 +15,7 @@ from graph.state import AegisOpsState
 
 HIGH_SENSITIVITY_CATEGORIES = {
     "security",
-    "database"
+    "database",
 }
 
 
@@ -27,7 +27,7 @@ CRITICAL_KEYWORDS = {
     "failed login",
     "privileged account",
     "malware",
-    "ransomware"
+    "ransomware",
 }
 
 
@@ -43,6 +43,7 @@ def _derive_risk_level(state: AegisOpsState) -> str:
         "predicted_category",
         ""
     ).lower()
+
 
     incident = state.get(
         "incident_text",
@@ -60,13 +61,13 @@ def _derive_risk_level(state: AegisOpsState) -> str:
         0.0
     )
 
+
     needs_review = state.get(
         "needs_human_review",
         False
     )
 
 
-    # Security keyword escalation
     security_indicator = any(
         keyword in incident
         for keyword in CRITICAL_KEYWORDS
@@ -123,6 +124,7 @@ def run_manager_summary_agent(
         "Unknown"
     )
 
+
     priority_conf = state.get(
         "priority_confidence",
         0.0
@@ -133,6 +135,7 @@ def run_manager_summary_agent(
         "predicted_category",
         "Unknown"
     )
+
 
     category_conf = state.get(
         "category_confidence",
@@ -148,13 +151,27 @@ def run_manager_summary_agent(
 
     evidence = state.get(
         "log_findings",
-        "Log evidence pending."
+        "No log evidence available."
     )
 
 
-    command = state.get(
-        "proposed_command",
-        "No diagnostic command proposed."
+    rag_summary = state.get(
+        "rag_summary",
+        "No knowledge base information available."
+    )
+
+
+    # Shell commands
+    commands = state.get(
+        "proposed_commands",
+        []
+    )
+
+
+    command_text = (
+        "\n".join(commands)
+        if commands
+        else "No diagnostic command proposed."
     )
 
 
@@ -179,22 +196,27 @@ def run_manager_summary_agent(
 
 
     summary = f"""
+
 ==============================
 AEGISOPS INCIDENT SUMMARY
 ==============================
+
 
 Incident Status
 ---------------
 {status}
 
+
 Priority
 --------
-{priority} (Confidence: {priority_conf:.2f})
+{priority}
+Confidence: {priority_conf:.2f}
 
 
 Category
 --------
-{category} (Confidence: {category_conf:.2f})
+{category}
+Confidence: {category_conf:.2f}
 
 
 Risk Level
@@ -202,19 +224,24 @@ Risk Level
 {risk.upper()}
 
 
+RAG Knowledge Findings
+----------------------
+{rag_summary}
+
+
 Root Cause Analysis
 -------------------
 {root}
 
 
-Supporting Evidence
--------------------
+Supporting Log Evidence
+-----------------------
 {evidence}
 
 
-Recommended Diagnostic Action
------------------------------
-{command}
+Recommended Diagnostic Actions
+------------------------------
+{command_text}
 
 
 Approval Status
@@ -222,23 +249,27 @@ Approval Status
 {approval}
 
 
-Ticket Information
-------------------
-{ticket}
+Ticket ID
+---------
+{ticket.get("incident_id","Unknown")}
 
 
 ==============================
 End of Summary
 ==============================
+
 """
 
 
     return {
 
-        "manager_summary": summary.strip(),
+        "manager_summary":
+            summary.strip(),
 
-        "risk_level": risk,
+        "risk_level":
+            risk,
 
-        "incident_status": status
+        "incident_status":
+            status,
 
     }
