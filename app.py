@@ -452,12 +452,26 @@ def _format_node_output(node_name: str, output: dict) -> str:
     return str(output)
 
 
-def run_pipeline(incident_text: str, incident_id: str, ticket_fields: dict, human_approved: bool):
+def run_pipeline(
+    incident_text: str,
+    incident_id: str,
+    ticket_fields: dict,
+    human_approved: bool
+):
     """Streams the graph node-by-node, rendering a status panel per agent."""
+
     app = build_graph()
-    panels = {name: st.status(NODE_LABELS[name], expanded=False) for name in NODE_ORDER}
+
+    panels = {
+        name: st.status(
+            NODE_LABELS[name],
+            expanded=False
+        )
+        for name in NODE_ORDER
+    }
 
     final_state = {}
+
     initial_input = {
         "incident_text": incident_text,
         "incident_id": incident_id,
@@ -465,13 +479,51 @@ def run_pipeline(incident_text: str, incident_id: str, ticket_fields: dict, huma
         "human_approved": human_approved,
     }
 
-    for chunk in app.stream(initial_input, stream_mode="updates"):
+
+    for chunk in app.stream(
+        initial_input,
+        stream_mode="updates"
+    ):
+
         for node_name, output in chunk.items():
-            final_state.update(output)
+
+            print("==============================")
+            print("PIPELINE NODE OUTPUT")
+            print("NODE:", node_name)
+            print("OUTPUT:", output)
+            print("==============================")
+
+
+            if isinstance(output, dict):
+                final_state.update(output)
+
+
             panel = panels.get(node_name)
+
+
             if panel is not None:
-                panel.update(label=f"{NODE_LABELS[node_name]} ✅", state="complete")
-                panel.write(_format_node_output(node_name, output))
+
+                panel.update(
+                    label=f"{NODE_LABELS[node_name]} ✅",
+                    state="complete"
+                )
+
+
+                formatted_output = _format_node_output(
+                    node_name,
+                    output
+                )
+
+
+                if formatted_output:
+                    panel.write(
+                        formatted_output
+                    )
+                else:
+                    panel.write(
+                        "No output returned by agent."
+                    )
+
 
     return final_state
 
