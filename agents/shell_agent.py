@@ -1,5 +1,8 @@
 """
 AegisOps Shell Agent
+
+Selects a safe allowlisted diagnostic command based on the
+incident category and suspected root cause.
 """
 
 from sandbox.allowlist import (
@@ -7,9 +10,9 @@ from sandbox.allowlist import (
     CommandNotAllowedError,
 )
 
-##########################################################
-# Default category mapping
-##########################################################
+###############################################################
+# Category defaults
+###############################################################
 
 CATEGORY_COMMANDS = {
 
@@ -21,7 +24,7 @@ CATEGORY_COMMANDS = {
 
     "hardware": ("disk_usage", None),
 
-    "network": ("ping", "localhost"),
+    "network": ("ping", "8.8.8.8"),
 
     "email": ("mail_queue", None),
 
@@ -29,33 +32,47 @@ CATEGORY_COMMANDS = {
 
 }
 
-##########################################################
+###############################################################
 # Keyword mapping
-##########################################################
+###############################################################
 
 KEYWORD_COMMANDS = {
 
-    "brute": ("failed_logins", None),
-
-    "credential": ("failed_logins", None),
+    "failed password": ("failed_logins", None),
 
     "failed login": ("failed_logins", None),
 
-    "failed ssh": ("failed_logins", None),
-
     "authentication": ("failed_logins", None),
+
+    "login": ("failed_logins", None),
 
     "ssh": ("ssh_logs", None),
 
-    "vpn": ("ssh_logs", None),
+    "brute": ("failed_logins", None),
+
+    "brute force": ("failed_logins", None),
+
+    "credential": ("failed_logins", None),
+
+    "compromise": ("failed_logins", None),
+
+    "account": ("failed_logins", None),
+
+    "nginx": ("service_status", "nginx"),
+
+    "apache": ("service_status", "apache2"),
 
     "mysql": ("mysql_ping", None),
 
     "postgres": ("mysql_ping", None),
 
+    "database": ("mysql_ping", None),
+
     "disk": ("disk_usage", None),
 
     "filesystem": ("disk_usage", None),
+
+    "storage": ("disk_usage", None),
 
     "memory": ("memory_usage", None),
 
@@ -67,62 +84,75 @@ KEYWORD_COMMANDS = {
 
     "container": ("docker_ps", None),
 
-    "nginx": ("service_status", "nginx"),
-
-    "apache": ("service_status", "apache2"),
-
     "smtp": ("mail_queue", None),
 
     "mail": ("mail_queue", None),
 
+    "dns": ("ping", "8.8.8.8"),
+
+    "latency": ("ping", "8.8.8.8"),
+
+    "timeout": ("ping", "8.8.8.8"),
+
 }
 
-##########################################################
-# Command selection
-##########################################################
+###############################################################
+# Choose command
+###############################################################
 
-def choose_command(category, root_cause):
+def choose_command(category, text):
 
-    root = str(root_cause).lower()
+    text = str(text).lower()
 
-    print("ROOT CAUSE:", root)
+    print("SEARCH TEXT:", text)
 
-    for keyword, command in KEYWORD_COMMANDS.items():
+    for keyword, value in KEYWORD_COMMANDS.items():
 
-        if keyword in root:
+        if keyword in text:
 
-            print("Matched:", keyword)
+            print("MATCHED:", keyword)
 
-            return command
+            return value
 
-    print("Category fallback:", category)
+    print("NO KEYWORD MATCH")
 
     return CATEGORY_COMMANDS.get(category, (None, None))
 
-
-##########################################################
-# Agent
-##########################################################
+###############################################################
+# Shell Agent
+###############################################################
 
 def run_shell_agent(state):
 
+    print("\n==============================")
+    print("SHELL AGENT STARTED")
+    print("==============================")
+
     category = state.get("predicted_category", "")
 
-    root = (
-    state.get("suspected_root_cause", "")
-    + " "
-    + state.get("incident_text", "")
-)
+    root = state.get("suspected_root_cause", "")
 
-    print("CATEGORY:", category)
-    print("ROOT:", root)
+    incident = state.get("incident_text", "")
+
+    combined_text = f"{root} {incident}"
+
+    print("CATEGORY :", category)
+    print("ROOT :", root)
+    print("INCIDENT :", incident)
 
     command_name, target = choose_command(
         category,
-        root,
+        combined_text,
     )
 
+    print("COMMAND :", command_name)
+    print("TARGET :", target)
+
+    ###########################################################
+
     if command_name is None:
+
+        print("NO COMMAND SELECTED")
 
         return {
 
@@ -136,9 +166,12 @@ def run_shell_agent(state):
 
             "approval_required": False,
 
-            "command_status": "No suitable diagnostic command found.",
+            "command_status":
+                "No suitable diagnostic command found.",
 
         }
+
+    ###########################################################
 
     try:
 
@@ -147,7 +180,11 @@ def run_shell_agent(state):
             target,
         )
 
+        print("COMMAND BUILT:", command)
+
     except CommandNotAllowedError as e:
+
+        print("ALLOWLIST ERROR:", e)
 
         return {
 
@@ -165,6 +202,8 @@ def run_shell_agent(state):
 
         }
 
+    ###########################################################
+
     return {
 
         "command_name": command_name,
@@ -177,6 +216,7 @@ def run_shell_agent(state):
 
         "approval_required": True,
 
-        "command_status": "Awaiting human approval before execution.",
+        "command_status":
+            "Awaiting human approval before execution.",
 
     }
