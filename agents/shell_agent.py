@@ -5,6 +5,8 @@ Selects a safe allowlisted diagnostic command based on the
 incident category and suspected root cause.
 """
 
+print(">>> SHELL AGENT FILE LOADED <<<")
+
 from sandbox.allowlist import (
     build_command,
     CommandNotAllowedError,
@@ -38,85 +40,76 @@ CATEGORY_COMMANDS = {
 
 KEYWORD_COMMANDS = {
 
+    # Security
     "failed password": ("failed_logins", None),
-
     "failed login": ("failed_logins", None),
-
     "authentication": ("failed_logins", None),
-
     "login": ("failed_logins", None),
-
     "ssh": ("ssh_logs", None),
-
     "brute": ("failed_logins", None),
-
     "brute force": ("failed_logins", None),
-
     "credential": ("failed_logins", None),
-
     "compromise": ("failed_logins", None),
-
     "account": ("failed_logins", None),
 
+    # Application
     "nginx": ("service_status", "nginx"),
-
     "apache": ("service_status", "apache2"),
 
+    # Database
     "mysql": ("mysql_ping", None),
-
     "postgres": ("mysql_ping", None),
-
     "database": ("mysql_ping", None),
 
+    # Hardware
     "disk": ("disk_usage", None),
-
     "filesystem": ("disk_usage", None),
-
     "storage": ("disk_usage", None),
-
     "memory": ("memory_usage", None),
-
     "oom": ("memory_usage", None),
-
     "cpu": ("cpu_usage", None),
 
+    # Docker
     "docker": ("docker_ps", None),
-
     "container": ("docker_ps", None),
 
+    # Mail
     "smtp": ("mail_queue", None),
-
     "mail": ("mail_queue", None),
 
+    # Network
     "dns": ("ping", "8.8.8.8"),
-
     "latency": ("ping", "8.8.8.8"),
-
     "timeout": ("ping", "8.8.8.8"),
 
 }
 
 ###############################################################
-# Choose command
+# Choose Command
 ###############################################################
 
 def choose_command(category, text):
 
     text = str(text).lower()
 
-    print("SEARCH TEXT:", text)
+    print("SEARCH TEXT:")
+    print(text)
 
     for keyword, value in KEYWORD_COMMANDS.items():
 
         if keyword in text:
 
-            print("MATCHED:", keyword)
+            print(f"MATCHED KEYWORD: {keyword}")
 
             return value
 
     print("NO KEYWORD MATCH")
 
-    return CATEGORY_COMMANDS.get(category, (None, None))
+    return CATEGORY_COMMANDS.get(
+        category,
+        (None, None),
+    )
+
 
 ###############################################################
 # Shell Agent
@@ -124,21 +117,34 @@ def choose_command(category, text):
 
 def run_shell_agent(state):
 
+    print(">>> run_shell_agent() CALLED <<<")
+
     print("\n==============================")
     print("SHELL AGENT STARTED")
     print("==============================")
 
-    category = state.get("predicted_category", "")
+    category = state.get(
+        "predicted_category",
+        "",
+    )
 
-    root = state.get("suspected_root_cause", "")
+    root = state.get(
+        "suspected_root_cause",
+        "",
+    )
 
-    incident = state.get("incident_text", "")
+    incident = state.get(
+        "incident_text",
+        "",
+    )
 
     combined_text = f"{root} {incident}"
 
     print("CATEGORY :", category)
     print("ROOT :", root)
     print("INCIDENT :", incident)
+
+    ###########################################################
 
     command_name, target = choose_command(
         category,
@@ -212,7 +218,9 @@ def run_shell_agent(state):
 
         "proposed_command": command,
 
-        "proposed_commands": [command],
+        "proposed_commands": [
+            command
+        ],
 
         "approval_required": True,
 
