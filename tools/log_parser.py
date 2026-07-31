@@ -124,39 +124,31 @@ CATEGORY_LOG_PRIORITY = {
 
     "security": [
         "server.log",
-        "auth.log",
-        "secure.log",
     ],
-
 
     "application": [
         "nginx_sample.log",
         "server.log",
     ],
 
-
     "database": [
         "server.log",
     ],
 
-
     "hardware": [
-        "server.log",
         "docker.log",
+        "server.log",
     ],
-
 
     "network": [
         "server.log",
     ],
 
-
     "email": [
         "mail_relay.log",
     ],
+
 }
-
-
 
 ##############################################################
 # Severity words
@@ -164,20 +156,73 @@ CATEGORY_LOG_PRIORITY = {
 
 SEVERITY = [
 
+    # Critical levels
     "critical",
     "fatal",
     "panic",
+    "emergency",
+    "alert",
+
+    # Errors
     "error",
     "failed",
+    "failure",
+    "exception",
+
+    # Connectivity
     "timeout",
+    "timed out",
+    "connection refused",
     "refused",
+    "unreachable",
+
+    # Security
     "denied",
     "blocked",
-    "unreachable",
+    "unauthorized",
+    "authentication failed",
+    "invalid user",
+
+    # Resource issues
+    "oom",
+    "oomkilled",
+    "out of memory",
+    "disk full",
+    "no space left",
+    "write failure",
+
+    # Service health
+    "degraded",
+    "restart",
+    "crash",
+    "terminated",
 
 ]
 
+##############################################################
+# Important root-cause patterns
+##############################################################
 
+IMPORTANT_PATTERNS = [
+
+    # Memory
+    "out of memory",
+    "oom",
+    "oomkilled",
+
+    # Disk
+    "disk full",
+    "no space left on device",
+    "log has not rotated",
+
+    # VPN / Network
+    "session limit reached",
+
+    # Security
+    "failed password",
+    "authentication failed",
+
+]
 
 ##############################################################
 # Load logs
