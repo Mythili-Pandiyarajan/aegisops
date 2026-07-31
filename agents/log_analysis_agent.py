@@ -8,27 +8,13 @@ from tools.llm import llm
 
 def run_log_analysis_agent(state):
 
-    print("🚀 LOG ANALYSIS STARTED")
-
-
     incident = state["incident_text"]
-
     category = state.get("predicted_category")
-
     uploaded_log = state.get("uploaded_log_path")
 
-
-    print("📌 Incident:", incident)
-    print("📌 Category:", category)
-    print("📌 Uploaded log:", uploaded_log)
-
-
-    ######################################################
+    ##########################################################
     # Search logs
-    ######################################################
-
-    print("🔎 Searching logs...")
-
+    ##########################################################
 
     log_hits = search_logs(
         incident_text=incident,
@@ -37,50 +23,35 @@ def run_log_analysis_agent(state):
         max_lines=10,
     )
 
-
-    print("✅ Log search completed")
-    print("📄 Logs found:", len(log_hits))
-
-
-    ######################################################
+    ##########################################################
     # No evidence
-    ######################################################
+    ##########################################################
 
-    if len(log_hits) == 0:
-
-        print("⚠️ No log evidence found")
+    if not log_hits:
 
         return {
-
-            "log_findings":
-                "No relevant log evidence found.",
-
-            "suspected_root_cause":
-                "Insufficient log evidence to determine root cause."
+            "log_findings": "No relevant log evidence found.",
+            "suspected_root_cause": "Insufficient log evidence.",
+            "llm_response": "",
         }
 
-
-    ######################################################
-    # Build context
-    ######################################################
+    ##########################################################
+    # Build evidence
+    ##########################################################
 
     evidence = "\n".join(
-        f"[{src}] {line[:300]}"
+        f"[{src}] {line}"
         for src, line in log_hits
     )
 
-
-    print("📝 Evidence prepared")
-
-
-    ######################################################
-    # Prompt
-    ######################################################
+    ##########################################################
+    # LLM Prompt
+    ##########################################################
 
     prompt = f"""
 You are a Senior Site Reliability Engineer.
 
-Use ONLY the evidence provided.
+Use ONLY the evidence below.
 
 Incident:
 {incident}
@@ -91,33 +62,47 @@ Category:
 Evidence:
 {evidence}
 
-Return:
+Return EXACTLY in this format.
 
-1. Root Cause
+ROOT_CAUSE:
+(one sentence)
 
-2. Supporting Evidence
+ANALYSIS:
+(short explanation)
 
-3. Recommended Next Diagnostic Step
+NEXT_STEP:
+(one recommendation)
 """
-
-
-    print("🧠 Sending request to Groq...")
-
-
-    ######################################################
-    # Groq LLM
-    ######################################################
 
     response = llm.invoke(prompt)
 
+    ##########################################################
+    # Extract only root cause
+    ##########################################################
 
-    print("✅ Groq response received")
+    root_cause = response
 
+    if "ROOT_CAUSE:" in response:
+
+        try:
+
+            root_cause = (
+                response.split("ROOT_CAUSE:")[1]
+                .split("ANALYSIS:")[0]
+                .strip()
+            )
+
+        except Exception:
+            root_cause = response
+
+    ##########################################################
 
     return {
 
-        "log_findings": evidence,
+        "suspected_root_cause": root_cause,
 
-        "suspected_root_cause": response,
+        "llm_response": response,
+
+        "log_findings": evidence,
 
     }
