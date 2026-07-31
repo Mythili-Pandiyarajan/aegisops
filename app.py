@@ -309,7 +309,7 @@ def _format_node_output(node_name: str, output: dict) -> str:
     if node_name == "rag_agent":
         docs = ", ".join(output.get("retrieved_docs", [])) or "none"
         return f"**Retrieved:** {docs}\n\n**Summary:** {output.get('rag_summary')}"
-   if node_name == "log_analysis":
+    if node_name == "log_analysis":
 
     print("==============================")
     print("LOG ANALYSIS OUTPUT:")
