@@ -50,13 +50,25 @@ def _summarize(incident_text: str, docs: list) -> str:
     return response.choices[0].message.content.strip()
 
 
-def run_rag_agent(state: AegisOpsState) -> dict:
-    query = f"{state['incident_text']} category={state.get('predicted_category')}"
+def run_rag_agent(state: AegisOpsState):
+
+    query = (
+        f"{state['incident_text']} "
+        f"{state.get('predicted_category','')} "
+        f"{state.get('predicted_priority','')}"
+    )
 
     retrieved_docs = retrieve(query, k=3)
-    rag_summary = _summarize(state["incident_text"], retrieved_docs)
+
+    rag_summary = _summarize(
+        state["incident_text"],
+        retrieved_docs,
+    )
 
     return {
-        "retrieved_docs": [d["id"] for d in retrieved_docs],
+
+        "retrieved_docs": retrieved_docs,
+
         "rag_summary": rag_summary,
+
     }
