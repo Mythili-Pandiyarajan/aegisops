@@ -301,11 +301,17 @@ def goto(page: str):
 def _format_node_output(node_name: str, output: dict) -> str:
 
     if node_name == "priority_predictor":
-        return f"**Priority:** {output.get('predicted_priority')}  \n**Confidence:** {output.get('priority_confidence'):.2f}"
+        return (
+            f"**Priority:** {output.get('predicted_priority')}  \n"
+            f"**Confidence:** {output.get('priority_confidence'):.2f}"
+        )
 
 
     if node_name == "category_classifier":
-        return f"**Category:** {output.get('predicted_category')}  \n**Confidence:** {output.get('category_confidence'):.2f}"
+        return (
+            f"**Category:** {output.get('predicted_category')}  \n"
+            f"**Confidence:** {output.get('category_confidence'):.2f}"
+        )
 
 
     if node_name == "merge_node":
@@ -315,7 +321,10 @@ def _format_node_output(node_name: str, output: dict) -> str:
 
     if node_name == "rag_agent":
         docs = ", ".join(output.get("retrieved_docs", [])) or "none"
-        return f"**Retrieved:** {docs}\n\n**Summary:** {output.get('rag_summary')}"
+        return (
+            f"**Retrieved:** {docs}\n\n"
+            f"**Summary:** {output.get('rag_summary')}"
+        )
 
 
     if node_name == "log_analysis":
@@ -349,11 +358,9 @@ def _format_node_output(node_name: str, output: dict) -> str:
 
 {root}
 
-
 ### Analysis
 
 {analysis}
-
 
 ### Supporting Evidence
 
@@ -363,20 +370,30 @@ def _format_node_output(node_name: str, output: dict) -> str:
 
     if node_name == "shell_agent":
 
-        print("===================================")
-        print("SHELL_AGENT OUTPUT:")
+        print("==============================")
+        print("SHELL AGENT OUTPUT:")
         print(output)
-        print("===================================")
+        print("==============================")
 
-        cmds = output.get("proposed_commands", [])
-        command_output = output.get("command_output")
+        cmds = output.get(
+            "proposed_commands",
+            []
+        )
+
+        command_output = output.get(
+            "command_output"
+        )
 
         if not cmds:
 
-            if command_output and str(command_output).startswith("blocked:"):
-                return f"⚠️ **Command blocked by safety validation:**\n\n{command_output}"
-
             return "No diagnostic command proposed."
+
+
+        return f"""
+**Proposed command:** `{cmds[0]}`
+
+Awaiting human approval before execution.
+"""
 **No diagnostic command proposed.**
 
 ### Debug Output
