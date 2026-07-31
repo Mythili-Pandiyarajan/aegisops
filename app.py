@@ -323,18 +323,22 @@ def _format_node_output(node_name: str, output: dict) -> str:
 {evidence}
 """
     if node_name == "shell_agent":
-        cmds = output.get("proposed_command")
-        cmds = [cmd] if cmd else []
+        cmds = output.get("proposed_commands", [])
+
         command_output = output.get("command_output")
+
         if not cmds:
             if command_output and str(command_output).startswith("blocked:"):
                 return f"⚠️ **Command blocked by safety validation:**\n\n{command_output}"
             return "No diagnostic command proposed."
+
         text = f"**Proposed command:** `{cmds[0]}`"
+
         if command_output:
             text += f"\n\n**Output:**\n```\n{command_output}\n```"
         else:
             text += "\n\n_Awaiting human approval before execution._"
+
         return text
     if node_name == "ticket_generator":
         payload = output.get("ticket_payload", {})
