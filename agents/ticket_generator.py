@@ -9,84 +9,131 @@ This is a mocked ticket creation flow:
 - Preserves audit information
 """
 
-from graph.state import AegisOpsState
 from datetime import datetime
+
+from graph.state import AegisOpsState
 
 
 def run_ticket_generator(state: AegisOpsState) -> dict:
 
     ticket_payload = {
 
-        # Incident details
+        # ======================================================
+        # Incident Metadata
+        # ======================================================
+
         "incident_id": state.get(
             "incident_id",
-            "INC-UNKNOWN"
+            "INC-UNKNOWN",
         ),
 
         "created_at": datetime.now().isoformat(),
 
+        "incident_text": state.get(
+            "incident_text",
+            "",
+        ),
 
-        # ML predictions
+        # ======================================================
+        # ML Predictions
+        # ======================================================
+
         "priority": state.get(
             "predicted_priority",
-            "Unknown"
+            "Unknown",
         ),
 
         "priority_confidence": state.get(
             "priority_confidence",
-            0.0
+            0.0,
         ),
 
         "category": state.get(
             "predicted_category",
-            "Unknown"
+            "Unknown",
         ),
 
         "category_confidence": state.get(
             "category_confidence",
-            0.0
+            0.0,
         ),
 
+        # ======================================================
+        # Knowledge Base (RAG)
+        # ======================================================
 
-        # Diagnosis
+        "rag_summary": state.get(
+            "rag_summary",
+            "No relevant knowledge found.",
+        ),
+
+        "retrieved_docs": state.get(
+            "retrieved_docs",
+            [],
+        ),
+
+        # ======================================================
+        # Log Analysis
+        # ======================================================
+
         "root_cause": state.get(
             "suspected_root_cause",
-            "Not available"
+            "Unknown",
         ),
 
         "log_evidence": state.get(
             "log_findings",
-            "No evidence available"
+            "No evidence available.",
         ),
 
+        "log_confidence": state.get(
+            "log_confidence",
+            0.0,
+        ),
 
-        # Shell agent output
-        "diagnostic_command": state.get(
-            "proposed_command",
-            None
+        # ======================================================
+        # Shell Agent
+        # ======================================================
+
+        "diagnostic_commands": state.get(
+            "proposed_commands",
+            [],
         ),
 
         "command_status": state.get(
             "command_status",
-            "Not available"
+            "Pending",
         ),
 
-
-        # Approval
         "approval_required": state.get(
             "approval_required",
-            False
+            False,
         ),
 
+        # ======================================================
+        # Manager Summary
+        # ======================================================
 
-        # Ticket status
+        "manager_summary": state.get(
+            "manager_summary",
+            "",
+        ),
+
+        "risk_level": state.get(
+            "risk_level",
+            "Unknown",
+        ),
+
+        # ======================================================
+        # Ticket Status
+        # ======================================================
+
         "status": "open",
 
     }
 
-
     return {
 
-        "ticket_payload": ticket_payload
+        "ticket_payload": ticket_payload,
 
     }
