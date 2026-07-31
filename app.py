@@ -303,22 +303,22 @@ def _format_node_output(node_name: str, output: dict) -> str:
         return f"**Retrieved:** {docs}\n\n**Summary:** {output.get('rag_summary')}"
     if node_name == "log_analysis":
 
-    root = output.get(
-        "suspected_root_cause",
-        "No root cause generated"
-    )
+        root = output.get(
+            "suspected_root_cause",
+            "No root cause generated"
+        )
 
-    analysis = output.get(
-        "llm_response",
-        ""
-    )
+        analysis = output.get(
+            "llm_response",
+            ""
+        )
 
-    evidence = output.get(
-        "log_findings",
-        "No evidence found"
-    )
+        evidence = output.get(
+            "log_findings",
+            "No evidence found"
+        )
 
-    return f"""
+        return f"""
 ### Root Cause
 
 {root}
@@ -330,7 +330,7 @@ def _format_node_output(node_name: str, output: dict) -> str:
 ### Supporting Evidence
 
 {evidence}
-"""
+"""    
     if node_name == "shell_agent":
         cmds = output.get("proposed_commands", [])
 
