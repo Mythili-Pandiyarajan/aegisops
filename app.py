@@ -24,6 +24,14 @@ import streamlit as st
 
 from graph.build_graph import build_graph
 
+# Debug: verify which shell_agent.py is being imported
+import agents.shell_agent as sa
+
+print("===================================")
+print("Loaded shell agent from:")
+print(sa.__file__)
+print("===================================")
+
 st.set_page_config(page_title="AegisOps", page_icon="🛡️", layout="wide", initial_sidebar_state="expanded")
 
 # =========================================================================
