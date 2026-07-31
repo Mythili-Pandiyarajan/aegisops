@@ -13,5 +13,5 @@ torchvision
 transformers
 groq
 python-dotenv
-scikit-learn==1.6.1
-xgboost==2.x.x
+scikit-learn
+xgboost
