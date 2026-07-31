@@ -1,5 +1,7 @@
 """
 AegisOps - Log Analysis Agent
+
+Analyzes incident logs and identifies root cause.
 """
 
 from tools.log_parser import search_logs
@@ -8,9 +10,29 @@ from tools.llm import llm
 
 def run_log_analysis_agent(state):
 
-    incident = state["incident_text"]
-    category = state.get("predicted_category")
-    uploaded_log = state.get("uploaded_log_path")
+    print("\n==============================")
+    print("LOG ANALYSIS AGENT STARTED")
+    print("==============================")
+
+    incident = state.get(
+        "incident_text",
+        ""
+    )
+
+    category = state.get(
+        "predicted_category",
+        ""
+    )
+
+    uploaded_log = state.get(
+        "uploaded_log_path"
+    )
+
+
+    print("CATEGORY:", category)
+    print("INCIDENT:")
+    print(incident)
+
 
     ##########################################################
     # Search Logs
@@ -23,6 +45,11 @@ def run_log_analysis_agent(state):
         max_lines=10,
     )
 
+
+    print("\nLOG HITS FOUND:")
+    print(log_hits)
+
+
     ##########################################################
     # No Evidence
     ##########################################################
@@ -31,14 +58,20 @@ def run_log_analysis_agent(state):
 
         return {
 
-            "log_findings": "No relevant log evidence found.",
+            "log_findings":
+                "No relevant log evidence found.",
 
             "suspected_root_cause":
-                "Insufficient log evidence to determine the root cause.",
+                "Unable to determine root cause because no matching logs were found.",
 
-            "llm_response": "",
+            "llm_response":
+                "",
+
+            "log_confidence":
+                0.0,
 
         }
+
 
     ##########################################################
     # Build Evidence
@@ -49,47 +82,58 @@ def run_log_analysis_agent(state):
         for src, line in log_hits
     )
 
+
+    print("\nEVIDENCE:")
+    print(evidence)
+
+
+
     ##########################################################
-    # Prompt
+    # LLM Analysis
     ##########################################################
 
     prompt = f"""
-You are a Senior Site Reliability Engineer.
 
-Use ONLY the supplied evidence.
+You are a Senior Security Operations Engineer.
 
-Incident
---------
+Analyze ONLY the evidence below.
+
+Incident:
 {incident}
 
-Category
---------
+Category:
 {category}
 
-Evidence
---------
+
+Log Evidence:
 {evidence}
 
-Return EXACTLY in this format.
+
+Return:
 
 ROOT_CAUSE:
-(one short sentence)
+one sentence
 
 ANALYSIS:
-(2-3 sentences)
+short explanation using evidence
 
 NEXT_STEP:
-(one recommendation)
+recommended action
+
 """
 
-    ##########################################################
-    # Invoke LLM
-    ##########################################################
 
     response = llm.invoke(prompt)
 
+
     if not isinstance(response, str):
         response = str(response)
+
+
+    print("\nLLM RESPONSE:")
+    print(response)
+
+
 
     ##########################################################
     # Extract Root Cause
@@ -97,12 +141,14 @@ NEXT_STEP:
 
     root_cause = response
 
+
     if "ROOT_CAUSE:" in response:
 
         try:
 
             root_cause = (
-                response.split("ROOT_CAUSE:")[1]
+                response
+                .split("ROOT_CAUSE:")[1]
                 .split("ANALYSIS:")[0]
                 .strip()
             )
@@ -111,14 +157,29 @@ NEXT_STEP:
 
             root_cause = response.strip()
 
+
+
+    ##########################################################
+    # Return State
     ##########################################################
 
     return {
 
-        "suspected_root_cause": root_cause,
 
-        "llm_response": response,
+        "log_findings":
+            evidence,
 
-        "log_findings": evidence,
+
+        "suspected_root_cause":
+            root_cause,
+
+
+        "llm_response":
+            response,
+
+
+        "log_confidence":
+            0.9,
+
 
     }

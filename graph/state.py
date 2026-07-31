@@ -40,6 +40,8 @@ class AegisOpsState(TypedDict, total=False):
 
     ticket_fields: Optional[dict]
 
+    human_approved: Optional[bool]
+
 
     # ==========================================================
     # PRIORITY PREDICTION

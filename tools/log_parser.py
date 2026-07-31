@@ -124,39 +124,31 @@ CATEGORY_LOG_PRIORITY = {
 
     "security": [
         "server.log",
-        "auth.log",
-        "secure.log",
     ],
-
 
     "application": [
         "nginx_sample.log",
         "server.log",
     ],
 
-
     "database": [
         "server.log",
     ],
 
-
     "hardware": [
-        "server.log",
         "docker.log",
+        "server.log",
     ],
-
 
     "network": [
         "server.log",
     ],
 
-
     "email": [
         "mail_relay.log",
     ],
+
 }
-
-
 
 ##############################################################
 # Severity words
@@ -164,20 +156,73 @@ CATEGORY_LOG_PRIORITY = {
 
 SEVERITY = [
 
+    # Critical levels
     "critical",
     "fatal",
     "panic",
+    "emergency",
+    "alert",
+
+    # Errors
     "error",
     "failed",
+    "failure",
+    "exception",
+
+    # Connectivity
     "timeout",
+    "timed out",
+    "connection refused",
     "refused",
+    "unreachable",
+
+    # Security
     "denied",
     "blocked",
-    "unreachable",
+    "unauthorized",
+    "authentication failed",
+    "invalid user",
+
+    # Resource issues
+    "oom",
+    "oomkilled",
+    "out of memory",
+    "disk full",
+    "no space left",
+    "write failure",
+
+    # Service health
+    "degraded",
+    "restart",
+    "crash",
+    "terminated",
 
 ]
 
+##############################################################
+# Important root-cause patterns
+##############################################################
 
+IMPORTANT_PATTERNS = [
+
+    # Memory
+    "out of memory",
+    "oom",
+    "oomkilled",
+
+    # Disk
+    "disk full",
+    "no space left on device",
+    "log has not rotated",
+
+    # VPN / Network
+    "session limit reached",
+
+    # Security
+    "failed password",
+    "authentication failed",
+
+]
 
 ##############################################################
 # Load logs
@@ -275,38 +320,32 @@ def search_logs(
 
     )
 
-
-
     ##########################################################
     # Select files
     ##########################################################
 
+    files = []
+
+    # Search uploaded log first (if provided)
     if uploaded_log_path:
 
-        files = [
-            Path(uploaded_log_path)
-        ]
+        uploaded_path = Path(uploaded_log_path)
 
-    else:
+        if uploaded_path.exists():
+            files.append(uploaded_path)
 
-        files = []
+    # Then search built-in sample logs
+    priority_logs = CATEGORY_LOG_PRIORITY.get(
+        category,
+        DEFAULT_LOGS
+    )
 
+    for log in priority_logs:
 
-        # category priority first
+        log_path = LOG_DIR / log
 
-        priority_logs = CATEGORY_LOG_PRIORITY.get(
-            category,
-            DEFAULT_LOGS
-        )
-
-
-        for log in priority_logs:
-
-            files.append(
-                LOG_DIR / log
-            )
-
-
+        if log_path.exists() and log_path not in files:
+            files.append(log_path)
 
     ##########################################################
     # Collect candidates
