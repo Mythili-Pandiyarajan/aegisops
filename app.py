@@ -340,23 +340,43 @@ def _format_node_output(node_name: str, output: dict) -> str:
 {evidence}
 """    
     if node_name == "shell_agent":
-        cmds = output.get("proposed_commands", [])
 
-        command_output = output.get("command_output")
+    print("===================================")
+    print("SHELL_AGENT OUTPUT:")
+    print(output)
+    print("===================================")
 
-        if not cmds:
-            if command_output and str(command_output).startswith("blocked:"):
-                return f"⚠️ **Command blocked by safety validation:**\n\n{command_output}"
-            return "No diagnostic command proposed."
+    cmds = output.get("proposed_commands", [])
+    command_output = output.get("command_output")
 
-        text = f"**Proposed command:** `{cmds[0]}`"
+    if not cmds:
 
-        if command_output:
-            text += f"\n\n**Output:**\n```\n{command_output}\n```"
-        else:
-            text += "\n\n_Awaiting human approval before execution._"
+        if command_output and str(command_output).startswith("blocked:"):
+            return f"⚠️ **Command blocked by safety validation:**\n\n{command_output}"
 
-        return text
+        return f"""
+**No diagnostic command proposed.**
+
+### Debug Output
+
+{output}
+"""
+
+    text = f"**Proposed command:** `{cmds[0]}`"
+
+    if command_output:
+        text += f"\n\n**Output:**\n```\n{command_output}\n```"
+    else:
+        text += "\n\n_Awaiting human approval before execution._"
+
+    text += f"""
+
+### Debug Output
+
+{output}
+"""
+
+    return text
     if node_name == "ticket_generator":
         payload = output.get("ticket_payload", {})
         return f"**Ticket:** `{payload.get('incident_id')}` | {payload.get('priority')} | {payload.get('category')} | {payload.get('status')}"
