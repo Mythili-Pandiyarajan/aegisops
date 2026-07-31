@@ -18,23 +18,47 @@ Run with:
 import json
 import os
 import traceback
+import inspect
 from datetime import datetime
 
 import streamlit as st
 
 from graph.build_graph import build_graph
-
 from graph.runner import run_pipeline
 
-# Debug: verify which shell_agent.py is being imported
-import agents.shell_agent as sa
+
+# ==========================================================
+# DEBUG: VERIFY IMPORTED FILES
+# ==========================================================
+
+import graph.runner as runner_module
+import agents.shell_agent as shell_module
+
 
 print("===================================")
-print("Loaded shell agent from:")
-print(sa.__file__)
+print("Loaded runner from:")
+print(runner_module.__file__)
+
+print("\nrun_pipeline signature:")
+print(inspect.signature(run_pipeline))
+
+
+print("\nLoaded shell agent from:")
+print(shell_module.__file__)
+
 print("===================================")
 
-st.set_page_config(page_title="AegisOps", page_icon="🛡️", layout="wide", initial_sidebar_state="expanded")
+
+# ==========================================================
+# STREAMLIT CONFIG
+# ==========================================================
+
+st.set_page_config(
+    page_title="AegisOps",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
 # =========================================================================
 # Design tokens — clean, light, professional command-center theme.
