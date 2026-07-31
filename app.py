@@ -309,36 +309,47 @@ def _format_node_output(node_name: str, output: dict) -> str:
     if node_name == "rag_agent":
         docs = ", ".join(output.get("retrieved_docs", [])) or "none"
         return f"**Retrieved:** {docs}\n\n**Summary:** {output.get('rag_summary')}"
-    if node_name == "log_analysis":
+   if node_name == "log_analysis":
 
-        root = output.get(
-            "suspected_root_cause",
-            "No root cause generated"
-        )
+    print("==============================")
+    print("LOG ANALYSIS OUTPUT:")
+    print(output)
+    print("==============================")
 
-        analysis = output.get(
-            "llm_response",
-            ""
-        )
 
-        evidence = output.get(
-            "log_findings",
-            "No evidence found"
-        )
+    root = output.get(
+        "suspected_root_cause",
+        "No root cause generated"
+    )
 
-        return f"""
+
+    analysis = output.get(
+        "llm_response",
+        "No analysis generated"
+    )
+
+
+    evidence = output.get(
+        "log_findings",
+        "No evidence found"
+    )
+
+
+    return f"""
 ### Root Cause
 
 {root}
+
 
 ### Analysis
 
 {analysis}
 
+
 ### Supporting Evidence
 
 {evidence}
-"""    
+"""
     if node_name == "shell_agent":
 
         print("===================================")
