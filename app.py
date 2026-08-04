@@ -113,6 +113,21 @@ CI_CAT_OPTIONS = [
     "officeelectronics",
     "networkcomponents",
 ]
+IMPACT_OPTIONS = {
+    "1 - Extensive / widespread": 1,
+    "2 - Significant": 2,
+    "3 - Moderate": 3,
+    "4 - Minor / localized": 4,
+    "5 - Minimal": 5,
+}
+
+URGENCY_OPTIONS = {
+    "1 - Critical / immediate": 1,
+    "2 - High": 2,
+    "3 - Medium": 3,
+    "4 - Low": 4,
+    "5 - Very Low": 5,
+}
 CATEGORY_OPTIONS = ["incident", "request for information", "complaint", "request for change"]
 
 # Most common CI_Subcat per CI_Cat, from the real training data — use this
@@ -713,18 +728,25 @@ elif st.session_state.page == "intake":
         col_a, col_b = st.columns([1.6, 1])
 
         with col_a:
-
-            severity_label = st.selectbox(
-                "INITIAL SEVERITY VECTOR",
-                list(SEVERITY_OPTIONS.keys()),
-                index=2,
-            )
-
-            reported_severity = SEVERITY_OPTIONS[severity_label]
-
-            st.caption(
-                "＊ P1 (critical) severity automatically flags the incident for human manager approval before applying resolution plans."
-            )
+    impact_label = st.selectbox(
+        "IMPACT",
+        list(IMPACT_OPTIONS.keys()),
+        index=2,
+        help="How widespread is the effect? (1 = extensive, 5 = minimal)",
+    )
+    urgency_label = st.selectbox(
+        "URGENCY",
+        list(URGENCY_OPTIONS.keys()),
+        index=2,
+        help="How quickly does this need to be addressed? (1 = immediate, 5 = very low)",
+    )
+    impact = IMPACT_OPTIONS[impact_label]
+    urgency = URGENCY_OPTIONS[urgency_label]
+    reported_severity = f"P{min(impact, urgency)}"
+    st.caption(
+        f"＊ Priority = min(Impact, Urgency) = **{reported_severity}**. "
+        f"P1 severity automatically flags the incident for human manager approval."
+    )
 
         with col_b:
 
@@ -868,6 +890,8 @@ elif st.session_state.page == "intake":
                 "category": category,
 
                 "open_hour": open_hour,
+                "impact": impact,
+                "urgency": urgency,
             }
 
             record = {
