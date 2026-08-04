@@ -415,7 +415,7 @@ def search_logs(
     for score,source,line in candidates:
 
 
-        if source_count[source] >= 5:
+        if source_count[source] >= max_lines:
 
             continue
 
