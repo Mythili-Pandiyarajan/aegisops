@@ -728,26 +728,28 @@ elif st.session_state.page == "intake":
         col_a, col_b = st.columns([1.6, 1])
 
         with col_a:
-    impact_label = st.selectbox(
-        "IMPACT",
-        list(IMPACT_OPTIONS.keys()),
-        index=2,
-        help="How widespread is the effect? (1 = extensive, 5 = minimal)",
-    )
-    urgency_label = st.selectbox(
-        "URGENCY",
-        list(URGENCY_OPTIONS.keys()),
-        index=2,
-        help="How quickly does this need to be addressed? (1 = immediate, 5 = very low)",
-    )
-    impact = IMPACT_OPTIONS[impact_label]
-    urgency = URGENCY_OPTIONS[urgency_label]
-    reported_severity = f"P{min(impact, urgency)}"
-    st.caption(
-        f"＊ Priority = min(Impact, Urgency) = **{reported_severity}**. "
-        f"P1 severity automatically flags the incident for human manager approval."
-    )
+            impact_label = st.selectbox(
+                "IMPACT",
+                list(IMPACT_OPTIONS.keys()),
+                index=2,
+                help="How widespread is the effect? (1 = extensive, 5 = minimal)",
+            )
 
+            urgency_label = st.selectbox(
+                "URGENCY",
+                list(URGENCY_OPTIONS.keys()),
+                index=2,
+                help="How quickly does this need to be addressed? (1 = immediate, 5 = very low)",
+            )
+
+            impact = IMPACT_OPTIONS[impact_label]
+            urgency = URGENCY_OPTIONS[urgency_label]
+            reported_severity = f"P{min(impact, urgency)}"
+
+            st.caption(
+                f"**Priority = min(Impact, Urgency) = {reported_severity}**. "
+                "P1 severity automatically flags the incident for human manager approval."
+            )
         with col_b:
 
             st.markdown(
