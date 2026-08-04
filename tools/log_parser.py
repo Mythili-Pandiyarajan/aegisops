@@ -123,7 +123,6 @@ CATEGORY_KEYWORDS = {
 CATEGORY_LOG_PRIORITY = {
 
     "security": [
-        "server.log",
         "auth.log",
     ],
 
