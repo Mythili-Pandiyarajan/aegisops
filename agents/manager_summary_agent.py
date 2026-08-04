@@ -19,16 +19,40 @@ HIGH_SENSITIVITY_CATEGORIES = {
 }
 
 
+# Individual signal words rather than rigid multi-word phrases.
+# Exact phrases like "failed login" miss real-world phrasing like
+# "failed SSH login attempts" — requiring several distinct signal
+# words to be present is more robust to natural variation while
+# still avoiding a single stray word triggering a false positive.
 CRITICAL_KEYWORDS = {
-    "brute force",
-    "credential stuffing",
-    "account compromise",
-    "unauthorized login",
-    "failed login",
-    "privileged account",
+    "brute",
+    "force",
+    "credential",
+    "stuffing",
+    "compromise",
+    "compromised",
+    "unauthorized",
     "malware",
     "ransomware",
+    "privileged",
+    "exfiltration",
+    "breach",
 }
+
+
+CRITICAL_KEYWORD_MIN_HITS = 2
+
+
+
+def _security_indicator(incident: str) -> bool:
+
+    hits = sum(
+        1
+        for keyword in CRITICAL_KEYWORDS
+        if keyword in incident
+    )
+
+    return hits >= CRITICAL_KEYWORD_MIN_HITS
 
 
 
@@ -68,10 +92,7 @@ def _derive_risk_level(state: AegisOpsState) -> str:
     )
 
 
-    security_indicator = any(
-        keyword in incident
-        for keyword in CRITICAL_KEYWORDS
-    )
+    security_indicator = _security_indicator(incident)
 
 
     if priority == "P1":
